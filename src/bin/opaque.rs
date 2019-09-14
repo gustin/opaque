@@ -1,8 +1,8 @@
 use opaque::registration;
 
-use rand::rngs::OsRng;
-use ed25519_dalek::Keypair;
-use ed25519_dalek::PublicKey;
+use rand::rngs::osrng;
+use ed25519_dalek::keypair;
+use ed25519_dalek::publickey;
 
 fn main() {
     println!("`~- OPAQUE -~'");
@@ -27,8 +27,26 @@ fn main() {
     let mut alpha = [0; 32];
     blake::hash(256, b"password", &mut alpha).unwrap();
 
-    // take password and a cryptographic generator as inputs to hash function
-    // results in a cryptographic point in a public-key group known as Alpha
+    // U and S run OPRF(kU;PwdU) as defined in Section 2 with only U
+    // learning the result, denoted RwdU (mnemonics for "Randomized
+    // PwdU").
+
+
+
+    // U generates an "envelope" EnvU defined as
+    // EnvU = AuthEnc(RwdU; PrivU, PubU, PubS)
+
+    // where AuthEnc is an authenticated encryption function with the
+    // "key committing" property and is specified in Section 3.1.1 below.
+    // In EnvU, all values require authentication and PrivU also requires
+    // encryption.  However, for simplicity and to hide the EnvU
+    // contents, we specify that all values are encrypted (not just
+    // authenticated).  PubU can be omitted from EnvU if it is not needed
+    // for running the key-exchange protocol by the client or if it can
+    // be reconstructed from PrivU.
+
+
+    // U sends EnvU and PubU to S and erases PwdU, RwdU and all keys.
 
 
     registration(8, 10);
