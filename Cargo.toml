@@ -4,12 +4,7 @@ version = "0.0.1"
 authors = ["gustin <gustin@mycelium.dev>"]
 edition = "2018"
 
-[lib]
-name = "opaque"
-path = "src/lib.rs"
-
-[[bin]]
-name = "mybin"
-path = "src/bin.rs"
-
 [dependencies]
+rand = "*"
+ed25519-dalek = "1.0.0-pre.1"
+blake = "2.0.0"
