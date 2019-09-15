@@ -25,3 +25,8 @@ instead.  We plan to eventually support (VXEdDSA)[https://github.com/dalek-crypt
 ## General notes
 
 Consider using Subtle for constant time: https://github.com/dalek-cryptography/subtle
+
+Zero out memory with: https://lib.rs/crates/zeroize
+
+Use Ring for CSPRING: https://docs.rs/ring/0.16.9/ring/rand/index.html
+

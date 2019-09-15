@@ -1,8 +1,9 @@
 use opaque::registration;
 
-use rand::rngs::osrng;
-use ed25519_dalek::keypair;
-use ed25519_dalek::publickey;
+use rand::rngs::OsRng;
+use ed25519_dalek::Keypair;
+use ed25519_dalek::PublicKey;
+
 
 fn main() {
     println!("`~- OPAQUE -~'");
