@@ -16,10 +16,10 @@ pub fn registration(user_id: u8, alpha: u8) -> u8 {
     // keys PrivS and PubS for use with protocol KE (the server can use
     // the same pair of keys with multiple users), and sends PubS to U.
     // CSPRING: just using OS's PRNG for now
- //   let mut csprng: OsRng = OsRng::new().unwrap();
+    let mut csprng: OsRng = OsRng::new().unwrap();
     // Generate a keypair
- //   let keypair: Keypair = Keypair::generate(&mut csprng);
- //   let _public_key: PublicKey = keypair.public;
+    let keypair: Keypair = Keypair::generate(&mut csprng);
+    let _public_key: PublicKey = keypair.public;
 
 
     // S stores (EnvU, PubS, PrivS, PubU, kU, vU) in a user-specific

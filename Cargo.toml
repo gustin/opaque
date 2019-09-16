@@ -8,3 +8,4 @@ edition = "2018"
 rand = "*"
 ed25519-dalek = "1.0.0-pre.1"
 blake = "2.0.0"
+ocelot = { git = "https://github.com/GaloisInc/ocelot.git", rev = "0.3.1" }
