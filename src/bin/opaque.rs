@@ -9,14 +9,54 @@ fn OPRF() {
    // OPAQUE uses a specific OPRF instantiation, called DH-OPRF, where the
    // PRF, denoted F, is defined as follows.
 
+   // ***> Spec
+
    // Parameters: Hash function H (e.g., a SHA2 or SHA3 function), a cyclic
    // group G of prime order q, a generator g of G, and hash function H'
    // mapping arbitrary strings into G (where H' is modeled as a random
    // oracle).
+
     // o  DH-OPRF domain: Any string
     // o  DH-OPRF range: The range of the hash function H
     // o  DH-OPRF key: A random element k in [0..q-1]; denote v=g^k
     // o  DH-OPRF Operation: F(k; x) = H(x, v, H'(x)^k)
+
+
+    // ***> Impl
+    // Parameters:
+
+    // Hash function H (e.g. a SHA2 or SHA3)
+    blake::hash(256, b"password", &mut alpha).unwrap();
+
+    // a cyclic group G of prime order q
+    // -> G is the Ristretto group of prime order q
+
+
+    // a generator g of G
+    // -> g is something that can return a point from the group,
+    // from the Ed25519 curve
+
+
+
+    // a hash function H' mapping arbitrary strings into G
+    // where H' is modeled as a random oracle
+    // -> This is the hashing of a string to an elliptical
+    // curve point.
+
+
+
+    // DH-OPRF domain: any string
+    // -> "plaintext"
+
+    // DH-OPRF range: The range of the hash function H
+    // -> what is the range of the blake2?
+
+
+    // DH-OPRF key: A random element k in [0..q-1]; denote v=g^k
+    // -> This is the key the server generates to feed the OPRF, I think
+
+
+    // ***> Spec
 
     // Protocol for computing DH-OPRF, U with input x and S with input k:
     // o  U: choose random r in [0..q-1], send alpha=H'(x)*g^r to S
@@ -24,6 +64,9 @@ fn OPRF() {
     // beta=alpha^k
     // o  U: upon receiving values beta and v, set the PRF output to
     // H(x, v, beta*v^{-r})
+
+
+    // ***> Impl
 
 }
 
