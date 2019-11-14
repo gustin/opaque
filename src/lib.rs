@@ -2,7 +2,10 @@
 //use ed25519_dalek::Keypair;
 //use ed25519_dalek::PublicKey;
 
-struct RegistrationResult {}
+struct RegistrationResult {
+    // beta, vU, envU
+
+}
 
 pub fn registration(user_id: u8, alpha: u8) -> u8 {
     // S chooses OPRF key kU (random and independent for each user U) and

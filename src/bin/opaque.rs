@@ -9,7 +9,7 @@ use sha2::Sha512;
 use x25519_dalek::EphemeralSecret;
 use x25519_dalek::PublicKey;
 
-fn OPRF() {
+fn OPRF(x: &RistrettoPoint) -> {
     // OPAQUE uses a specific OPRF instantiation, called DH-OPRF, where the
     // PRF, denoted F, is defined as follows.
 
@@ -43,18 +43,18 @@ fn OPRF() {
     // log of the output point with respect to any other point should be unknown.
     // The map is applied twice and the results are added, to ensure a uniform
     // distribution.
-    let mut cspring: OsRng = OsRng::new().unwrap();
-    let px = RistrettoPoint::random(&mut cspring);
-    println!("RistrettoPoint::random(): {:?}", px);
+//    let mut cspring: OsRng = OsRng::new().unwrap();
+//    let px = RistrettoPoint::random(&mut cspring);
+//    println!("RistrettoPoint::random(): {:?}", px);
 
     // a hash function H' mapping arbitrary strings into G
     // where H' is modeled as a random oracle
     // -> This is the hashing of a string to an elliptical
     // curve point.
     // RistrettoPoint::from_hash()
-    let msg = "plaintext";
-    let hash_prime = RistrettoPoint::hash_from_bytes::<Sha512>(msg.as_bytes());
-    println!("Ristretto Point from hash prime function: {:?}", hash_prime);
+//   let msg = "plaintext";
+//    let hash_prime = RistrettoPoint::hash_from_bytes::<Sha512>(msg.as_bytes());
+//    println!("Ristretto Point from hash prime function: {:?}", hash_prime);
 
     // DH-OPRF domain: any string
     // -> "plaintext"
@@ -187,8 +187,6 @@ fn DH() {
 
 fn main() {
     println!("`~- OPAQUE -~'");
-    OPRF();
-    DH();
 
     // ***> Spec
 
@@ -196,23 +194,34 @@ fn main() {
     // https://tools.ietf.org/html/draft-krawczyk-cfrg-opaque-02#section-3.1
     // Password registration is run between a user U and a server S.
 
+    // User / Client
+
     // U chooses password PwdU and a pair of private-public keys PrivU
     // and PubU for the given protocol KE
 
     // CSPRING: just using OS's PRNG for now
-    //    let mut csprng: OsRng = OsRng::new().unwrap();
-    // Generate a keypair
-    //    let keypair: Keypair = Keypair::generate(&mut csprng);
-    //    let _public_key: PublicKey = keypair.public;
+    let mut cspring = OsRng::new().unwrap();
+    let privU = EphemeralSecret::new(&mut cspring);
+    let pubU = PublicKey::from(&privU);
 
     // basic password for now
-    //    let _password = "fizzbangpopdog";
-    //    let _user_id = 8;
+    let pwdU = "fizzbangpopdog";
+    let _user_id = 8;
 
     //  Protocol for computing DH-OPRF, U with input x and S with input k:
     //  U: choose random r in [0..q-1], send alpha=H'(x)*g^r to S
-    //    let mut alpha = [0; 32];
-    //    blake::hash(256, b"password", &mut alpha).unwrap();
+
+
+//    let g = RistrettoPoint::random(&mut cspring);
+    let g = Scalar::random(&mut cspring);
+    let r = Scalar::random(&mut cspring);
+    let sub: Scalar = g * r;
+    let hash_prime = RistrettoPoint::hash_from_bytes::<Sha512>(pwdU.as_bytes());
+    let alpha = hash_prime * sub;
+    println!("Alpha {:?}:", alpha);
+
+    let rwdU = OPRF(alpha);
+
 
     // U and S run OPRF(kU;PwdU) as defined in Section 2 with only U
     // learning the result, denoted RwdU (mnemonics for "Randomized
