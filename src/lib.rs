@@ -1,13 +1,16 @@
-//use rand::rngs::OsRng;
-//use ed25519_dalek::Keypair;
-//use ed25519_dalek::PublicKey;
+use rand_os::OsRng;
+use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek::ristretto::RistrettoPoint;
 
-struct RegistrationResult {
-    // beta, vU, envU
-
+pub struct RegistrationResult {
+    pub beta: RistrettoPoint,
+    pub v: Scalar,
 }
 
-pub fn registration(user_id: u8, alpha: u8) -> u8 {
+pub fn registration(
+    alpha: &RistrettoPoint,
+    g: &Scalar,
+) -> RegistrationResult {
     // S chooses OPRF key kU (random and independent for each user U) and
     // sets vU = g^kU;
 
@@ -37,7 +40,14 @@ pub fn registration(user_id: u8, alpha: u8) -> u8 {
     // password check procedure to the client side is a more secure
     // alternative.
 
-    8
+    let mut cspring = OsRng::new().unwrap();
+    let k = Scalar::random(&mut cspring);
+    let v = g * k;
+    let beta = alpha * k;
+    RegistrationResult {
+        beta: beta,
+        v: v,
+    }
 }
 
 #[cfg(test)]

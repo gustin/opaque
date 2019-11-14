@@ -9,7 +9,7 @@ use sha2::Sha512;
 use x25519_dalek::EphemeralSecret;
 use x25519_dalek::PublicKey;
 
-fn OPRF(x: &RistrettoPoint) -> {
+fn OPRF(alpha: &RistrettoPoint, g: &RistrettoPoint) -> RistrettoPoint {
     // OPAQUE uses a specific OPRF instantiation, called DH-OPRF, where the
     // PRF, denoted F, is defined as follows.
 
@@ -43,18 +43,18 @@ fn OPRF(x: &RistrettoPoint) -> {
     // log of the output point with respect to any other point should be unknown.
     // The map is applied twice and the results are added, to ensure a uniform
     // distribution.
-//    let mut cspring: OsRng = OsRng::new().unwrap();
-//    let px = RistrettoPoint::random(&mut cspring);
-//    println!("RistrettoPoint::random(): {:?}", px);
+    //    let mut cspring: OsRng = OsRng::new().unwrap();
+    //    let px = RistrettoPoint::random(&mut cspring);
+    //    println!("RistrettoPoint::random(): {:?}", px);
 
     // a hash function H' mapping arbitrary strings into G
     // where H' is modeled as a random oracle
     // -> This is the hashing of a string to an elliptical
     // curve point.
     // RistrettoPoint::from_hash()
-//   let msg = "plaintext";
-//    let hash_prime = RistrettoPoint::hash_from_bytes::<Sha512>(msg.as_bytes());
-//    println!("Ristretto Point from hash prime function: {:?}", hash_prime);
+    //   let msg = "plaintext";
+    //    let hash_prime = RistrettoPoint::hash_from_bytes::<Sha512>(msg.as_bytes());
+    //    println!("Ristretto Point from hash prime function: {:?}", hash_prime);
 
     // DH-OPRF domain: any string
     // -> "plaintext"
@@ -78,36 +78,13 @@ fn OPRF(x: &RistrettoPoint) -> {
 
     // ***> Impl
 
-    // U with input x -> elliptical point? from hash?
-    // S inputs k -> k is the salt
-
-    // U: choose random r in [0..q-1]
-    let r = RistrettoPoint::random(&mut cspring);
-    println!("RistrettoPoint::random(): random r in [0..q-1] {:?}", r);
-
-    // send alpha=H'(x)*g^r
-    // H'(x)
-    //-let x = "";
-    //-hash_prime = RistrettoPoint::hash_from_bytes::<Sha512>(msg.as_bytes());
-
-    // g^r
-    let _g = 5;
-
-    // H'(x) * g^r
-    //let alpha = hash_prime * px;
-
-    // Scalars
-    let a: Scalar = Scalar::random(&mut cspring);
-    println!("Rando Scalar: {:?}", a);
-
-    let msg2 = "plaintext";
-    let s = Scalar::hash_from_bytes::<Sha512>(msg2.as_bytes());
-    println!("Scalar hash from: {:?}", s);
-
-    // invert
-
-    let inverse: Scalar = s.invert();
-    println!("Scalar inverse: {:?}", inverse);
+    // S: upon receiving a value alpha, respond with v=g^k and
+    // beta=alpha^k
+    let mut cspring = OsRng::new().unwrap();
+    let k = Scalar::random(&mut cspring);
+    let v = g * k;
+    let beta = alpha * k;
+    return beta;
 }
 
 // https://tools.ietf.org/html/rfc7748
@@ -201,27 +178,35 @@ fn main() {
 
     // CSPRING: just using OS's PRNG for now
     let mut cspring = OsRng::new().unwrap();
-    let privU = EphemeralSecret::new(&mut cspring);
-    let pubU = PublicKey::from(&privU);
+    let priv_u = EphemeralSecret::new(&mut cspring);
+    let pub_u = PublicKey::from(&priv_u);
 
     // basic password for now
-    let pwdU = "fizzbangpopdog";
+    let pwd_u = "fizzbangpopdog";
     let _user_id = 8;
 
     //  Protocol for computing DH-OPRF, U with input x and S with input k:
     //  U: choose random r in [0..q-1], send alpha=H'(x)*g^r to S
 
-
-//    let g = RistrettoPoint::random(&mut cspring);
+    //    let g = RistrettoPoint::random(&mut cspring);
     let g = Scalar::random(&mut cspring);
     let r = Scalar::random(&mut cspring);
     let sub: Scalar = g * r;
-    let hash_prime = RistrettoPoint::hash_from_bytes::<Sha512>(pwdU.as_bytes());
+    let hash_prime =
+        RistrettoPoint::hash_from_bytes::<Sha512>(pwd_u.as_bytes());
     let alpha = hash_prime * sub;
     println!("Alpha {:?}:", alpha);
 
-    let rwdU = OPRF(alpha);
+    let result = registration(&alpha, &g);
+    println!("Result beta: {:?} ", result.beta);
+    println!("Result V: {:?} ", result.v);
 
+    // U: upon receiving values beta and v, set the PRF output to
+    // H(x, v, beta*v^{-r})
+
+    let inverse_r = r.invert();
+    let sub_beta = result.beta * result.v * inverse_r;
+   // let rwd_u = blake2(
 
     // U and S run OPRF(kU;PwdU) as defined in Section 2 with only U
     // learning the result, denoted RwdU (mnemonics for "Randomized
@@ -240,6 +225,4 @@ fn main() {
     // be reconstructed from PrivU.
 
     // U sends EnvU and PubU to S and erases PwdU, RwdU and all keys.
-
-    registration(8, 10);
 }
