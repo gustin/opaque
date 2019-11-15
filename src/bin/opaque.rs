@@ -1,4 +1,5 @@
 use opaque::registration;
+use opaque::Envelope;
 
 use rand_os::OsRng;
 
@@ -201,16 +202,20 @@ fn main() {
     println!("Result beta: {:?} ", result.beta);
     println!("Result V: {:?} ", result.v);
 
+    // Guard: Ensure v and beta are in the Group
+
     // U: upon receiving values beta and v, set the PRF output to
     // H(x, v, beta*v^{-r})
 
     let inverse_r = r.invert();
     let sub_beta = result.beta * result.v * inverse_r;
-   // let rwd_u = blake2(
 
     // U and S run OPRF(kU;PwdU) as defined in Section 2 with only U
     // learning the result, denoted RwdU (mnemonics for "Randomized
     // PwdU").
+
+//    let rwd_u = blake2(
+
 
     // U generates an "envelope" EnvU defined as
     // EnvU = AuthEnc(RwdU; PrivU, PubU, PubS)
@@ -224,5 +229,15 @@ fn main() {
     // for running the key-exchange protocol by the client or if it can
     // be reconstructed from PrivU.
 
+
+    let envelope = Envelope {
+        priv_u: priv_u,
+        pub_u: pub_u,
+        pub_s: result.pub_s,
+    };
+
+
     // U sends EnvU and PubU to S and erases PwdU, RwdU and all keys.
+
+
 }

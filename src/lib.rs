@@ -2,21 +2,44 @@ use rand_os::OsRng;
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::ristretto::RistrettoPoint;
 
+use x25519_dalek::EphemeralSecret;
+use x25519_dalek::PublicKey;
+
+pub struct Envelope {
+    pub priv_u: EphemeralSecret,
+    pub pub_u: PublicKey,
+    pub pub_s: PublicKey,
+}
+
 pub struct RegistrationResult {
     pub beta: RistrettoPoint,
     pub v: Scalar,
+    pub pub_s: PublicKey,
 }
 
 pub fn registration(
     alpha: &RistrettoPoint,
     g: &Scalar,
 ) -> RegistrationResult {
+    // Guard: Ensure alpha is in the Ristretto group
+
+
     // S chooses OPRF key kU (random and independent for each user U) and
     // sets vU = g^kU;
 
     // it also chooses its own pair of private-public
     // keys PrivS and PubS for use with protocol KE (the server can use
     // the same pair of keys with multiple users), and sends PubS to U.
+
+    let mut cspring = OsRng::new().unwrap();
+    let priv_s = EphemeralSecret::new(&mut cspring);
+    let pub_s = PublicKey::from(&priv_s);
+
+
+
+
+
+
     // CSPRING: just using OS's PRNG for now
     //    let mut csprng: OsRng = OsRng::new().unwrap();
     // Generate a keypair
@@ -40,12 +63,12 @@ pub fn registration(
     // password check procedure to the client side is a more secure
     // alternative.
 
-    let mut cspring = OsRng::new().unwrap();
     let k = Scalar::random(&mut cspring);
     let v = g * k;
     let beta = alpha * k;
     RegistrationResult {
         beta: beta,
+        pub_s: pub_s,
         v: v,
     }
 }
