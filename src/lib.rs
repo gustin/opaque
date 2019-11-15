@@ -1,9 +1,12 @@
-use rand_os::OsRng;
-use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::ristretto::RistrettoPoint;
+use curve25519_dalek::scalar::Scalar;
+use rand_os::OsRng;
 
 use x25519_dalek::EphemeralSecret;
 use x25519_dalek::PublicKey;
+
+use std::collections::HashMap;
+use lazy_static::lazy_static;
 
 pub struct Envelope {
     pub priv_u: EphemeralSecret,
@@ -11,18 +14,26 @@ pub struct Envelope {
     pub pub_s: PublicKey,
 }
 
+lazy_static! {
+    static ref USER_MAP: HashMap<&'static str, Envelope> = {
+        HashMap::new()
+    };
+}
+
+
 pub struct RegistrationResult {
     pub beta: RistrettoPoint,
     pub v: Scalar,
     pub pub_s: PublicKey,
 }
 
-pub fn registration(
-    alpha: &RistrettoPoint,
-    g: &Scalar,
-) -> RegistrationResult {
-    // Guard: Ensure alpha is in the Ristretto group
+pub struct AuthenticationResult {
+    pub v: Scalar,
+    pub env_u: Envelope,
+}
 
+pub fn registration(alpha: &RistrettoPoint, g: &Scalar) -> RegistrationResult {
+    // Guard: Ensure alpha is in the Ristretto group
 
     // S chooses OPRF key kU (random and independent for each user U) and
     // sets vU = g^kU;
@@ -34,11 +45,6 @@ pub fn registration(
     let mut cspring = OsRng::new().unwrap();
     let priv_s = EphemeralSecret::new(&mut cspring);
     let pub_s = PublicKey::from(&priv_s);
-
-
-
-
-
 
     // CSPRING: just using OS's PRNG for now
     //    let mut csprng: OsRng = OsRng::new().unwrap();
@@ -72,6 +78,22 @@ pub fn registration(
         v: v,
     }
 }
+
+/*
+pub fn authentication(user_id: &str, g: &Scalar) -> AuthenticationResult {
+    let mut cspring = OsRng::new().unwrap();
+ //   let k = Scalar::random(&mut cspring);
+  //  let v = g * k;
+    //let beta = alpha * k;
+
+    // look up EnvU by user_id
+
+    let v = Scalar::random(&mut cspring);
+    AuthenticationResult {
+        v: v,
+        env_u: envelope,
+    }
+}*/
 
 #[cfg(test)]
 mod tests {

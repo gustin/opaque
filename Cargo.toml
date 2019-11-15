@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 curve25519-dalek = "1.2.3"
 blake = "2.0.0"
+lazy_static = "1.4.0"
 rand = "0.7.2"
 rand_os = "0.1.3"
 sha2 = "0.8.0"

@@ -196,6 +196,7 @@ fn main() {
     let hash_prime =
         RistrettoPoint::hash_from_bytes::<Sha512>(pwd_u.as_bytes());
     let alpha = hash_prime * sub;
+    // Guard: alpha should be authenticated
     println!("Alpha {:?}:", alpha);
 
     let result = registration(&alpha, &g);
@@ -214,8 +215,7 @@ fn main() {
     // learning the result, denoted RwdU (mnemonics for "Randomized
     // PwdU").
 
-//    let rwd_u = blake2(
-
+    //    let rwd_u = blake2(
 
     // U generates an "envelope" EnvU defined as
     // EnvU = AuthEnc(RwdU; PrivU, PubU, PubS)
@@ -229,15 +229,16 @@ fn main() {
     // for running the key-exchange protocol by the client or if it can
     // be reconstructed from PrivU.
 
-
     let envelope = Envelope {
         priv_u: priv_u,
         pub_u: pub_u,
         pub_s: result.pub_s,
     };
 
+    // Section 3.1.1 Implementing the EnvU envelop
+
+    // HMAC this and encrypt, AES of some form with RwdU (rwd_u) being the
+    // key
 
     // U sends EnvU and PubU to S and erases PwdU, RwdU and all keys.
-
-
 }
