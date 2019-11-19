@@ -198,9 +198,9 @@ fn main() {
     // Guard: alpha should be authenticated
     println!("Alpha {:?}:", alpha);
 
-    let result = registration_1(&alpha, &g);
-    println!("Result beta: {:?} ", result.beta);
-    println!("Result V: {:?} ", result.v);
+    let (beta, v, pub_s) = registration_1(&alpha, &g);
+    println!("Result beta: {:?} ", beta);
+    println!("Result V: {:?} ", v);
 
     // Guard: Ensure v and beta are in the Group
 
@@ -208,7 +208,7 @@ fn main() {
     // H(x, v, beta*v^{-r})
 
     let inverse_r = r.invert();
-    let sub_beta = result.beta * result.v * inverse_r;
+    let sub_beta = beta * v * inverse_r;
 
     // U and S run OPRF(kU;PwdU) as defined in Section 2 with only U
     // learning the result, denoted RwdU (mnemonics for "Randomized
@@ -231,7 +231,7 @@ fn main() {
     let envelope = Envelope {
         priv_u: priv_u,
         pub_u: pub_u,
-        pub_s: result.pub_s,
+        pub_s: pub_s,
     };
 
     // Section 3.1.1 Implementing the EnvU envelop
@@ -244,5 +244,5 @@ fn main() {
 
     // C to S: Uid, alpha=H'(PwdU)*g^r, KE1
     // S to C: beta=alpha^kU, vU, EnvU, KE2
-    let env_u = authenticate_1(username, &alpha, &g);
+    let (beta_a, v_a, envelope_a) = authenticate_1(username, &alpha, &g);
 }

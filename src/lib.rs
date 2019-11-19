@@ -22,22 +22,10 @@ lazy_static! {
         { Mutex::new(HashMap::new()) };
 }
 
-pub struct RegistrationResult {
-    pub beta: RistrettoPoint,
-    pub v: Scalar,
-    pub pub_s: PublicKey,
-}
-
-pub struct AuthenticationResult {
-    pub beta: RistrettoPoint,
-    pub env_u: Envelope,
-    pub v: Scalar,
-}
-
 pub fn registration_1(
     alpha: &RistrettoPoint,
     g: &Scalar,
-) -> RegistrationResult {
+) -> (RistrettoPoint, Scalar, PublicKey) {
     // Guard: Ensure alpha is in the Ristretto group
 
     // S chooses OPRF key kU (random and independent for each user U) and
@@ -77,11 +65,7 @@ pub fn registration_1(
     let k = Scalar::random(&mut cspring);
     let v = g * k;
     let beta = alpha * k;
-    RegistrationResult {
-        beta: beta,
-        pub_s: pub_s,
-        v: v,
-    }
+    (beta, v, pub_s)
 }
 
 pub fn registration_2(username: &str, envelope: Envelope) {
@@ -96,7 +80,7 @@ pub fn authenticate_1(
     username: &str,
     alpha: &RistrettoPoint,
     g: &Scalar,
-) -> AuthenticationResult {
+) -> (RistrettoPoint, Scalar, Envelope) {
     let mut cspring = OsRng::new().unwrap();
     let k = Scalar::random(&mut cspring);
     let v = g * k;
@@ -106,11 +90,7 @@ pub fn authenticate_1(
         USER_MAP.lock().unwrap().get(username).unwrap().clone();
 
     // S to C: beta=alpha^kU, vU, EnvU, KE2
-    AuthenticationResult {
-        beta: beta,
-        env_u: envelope,
-        v: v,
-    }
+    (beta, v, envelope)
 }
 
 /*pub fn authenticate_step_2(
