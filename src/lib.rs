@@ -17,12 +17,21 @@ pub struct Envelope {
     pub pub_s: PublicKey,
 }
 
+#[derive(Clone)]
+struct UserRecord {
+    envelope: Option<Envelope>,
+    g: Scalar,
+    k_u: Scalar,
+    v_u: Scalar,
+}
+
 lazy_static! {
-    static ref USER_MAP: Mutex<HashMap<String, Envelope>> =
+    static ref USER_MAP: Mutex<HashMap<String, UserRecord>> =
         { Mutex::new(HashMap::new()) };
 }
 
 pub fn registration_1(
+    username: &str,
     alpha: &RistrettoPoint,
     g: &Scalar,
 ) -> (RistrettoPoint, Scalar, PublicKey) {
@@ -62,17 +71,32 @@ pub fn registration_1(
     // password check procedure to the client side is a more secure
     // alternative.
 
+    // CHANGE: k, v need to be stored along with envelope
     let k = Scalar::random(&mut cspring);
     let v = g * k;
     let beta = alpha * k;
+    let user_record = UserRecord {
+        envelope: None,
+        g: *g,
+        k_u: k,
+        v_u: v,
+    };
+    USER_MAP
+        .lock()
+        .unwrap()
+        .insert(username.to_string(), user_record);
+
     (beta, v, pub_s)
 }
 
 pub fn registration_2(username: &str, envelope: Envelope) {
+    let mut user_record: UserRecord =
+        USER_MAP.lock().unwrap().get(username).unwrap().clone();
+    user_record.envelope = Some(envelope);
     USER_MAP
         .lock()
         .unwrap()
-        .insert(username.to_string(), envelope);
+        .insert(username.to_string(), user_record);
     println!("Registering {:?}:", username);
 }
 
@@ -81,16 +105,13 @@ pub fn authenticate_1(
     alpha: &RistrettoPoint,
     g: &Scalar,
 ) -> (RistrettoPoint, Scalar, Envelope) {
-    let mut cspring = OsRng::new().unwrap();
-    let k = Scalar::random(&mut cspring);
-    let v = g * k;
-    let beta = alpha * k;
-
-    let envelope: Envelope =
+    let user_record: UserRecord =
         USER_MAP.lock().unwrap().get(username).unwrap().clone();
 
     // S to C: beta=alpha^kU, vU, EnvU, KE2
-    (beta, v, envelope)
+    let beta = alpha * user_record.k_u;
+
+    (beta, user_record.v_u, user_record.envelope.unwrap())
 }
 
 /*pub fn authenticate_step_2(

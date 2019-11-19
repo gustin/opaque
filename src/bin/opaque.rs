@@ -198,7 +198,7 @@ fn main() {
     // Guard: alpha should be authenticated
     println!("Alpha {:?}:", alpha);
 
-    let (beta, v, pub_s) = registration_1(&alpha, &g);
+    let (beta, v, pub_s) = registration_1(username, &alpha, &g);
     println!("Result beta: {:?} ", beta);
     println!("Result V: {:?} ", v);
 
@@ -209,6 +209,11 @@ fn main() {
 
     let inverse_r = r.invert();
     let sub_beta = beta * v * inverse_r;
+
+    // serialize then hash:
+    // https://jameshfisher.com/2018/01/09/how-to-hash-multiple-values/
+    // attack with non-injectivity of concatenation:
+    // https://sakurity.com/blog/2015/05/08/pusher.html
 
     // U and S run OPRF(kU;PwdU) as defined in Section 2 with only U
     // learning the result, denoted RwdU (mnemonics for "Randomized
