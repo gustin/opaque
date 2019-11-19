@@ -1,5 +1,4 @@
-use opaque::registration;
-use opaque::Envelope;
+use opaque::*;
 
 use rand_os::OsRng;
 
@@ -9,6 +8,7 @@ use sha2::Sha512;
 
 use x25519_dalek::EphemeralSecret;
 use x25519_dalek::PublicKey;
+use x25519_dalek::StaticSecret;
 
 fn OPRF(alpha: &RistrettoPoint, g: &RistrettoPoint) -> RistrettoPoint {
     // OPAQUE uses a specific OPRF instantiation, called DH-OPRF, where the
@@ -179,17 +179,16 @@ fn main() {
 
     // CSPRING: just using OS's PRNG for now
     let mut cspring = OsRng::new().unwrap();
-    let priv_u = EphemeralSecret::new(&mut cspring);
+    let priv_u = StaticSecret::new(&mut cspring);
     let pub_u = PublicKey::from(&priv_u);
 
     // basic password for now
+    let username = "barry";
     let pwd_u = "fizzbangpopdog";
-    let _user_id = 8;
 
     //  Protocol for computing DH-OPRF, U with input x and S with input k:
     //  U: choose random r in [0..q-1], send alpha=H'(x)*g^r to S
 
-    //    let g = RistrettoPoint::random(&mut cspring);
     let g = Scalar::random(&mut cspring);
     let r = Scalar::random(&mut cspring);
     let sub: Scalar = g * r;
@@ -199,7 +198,7 @@ fn main() {
     // Guard: alpha should be authenticated
     println!("Alpha {:?}:", alpha);
 
-    let result = registration(&alpha, &g);
+    let result = registration_1(&alpha, &g);
     println!("Result beta: {:?} ", result.beta);
     println!("Result V: {:?} ", result.v);
 
@@ -241,4 +240,9 @@ fn main() {
     // key
 
     // U sends EnvU and PubU to S and erases PwdU, RwdU and all keys.
+    registration_2(username, envelope);
+
+    // C to S: Uid, alpha=H'(PwdU)*g^r, KE1
+    // S to C: beta=alpha^kU, vU, EnvU, KE2
+    let env_u = authenticate_1(username, &alpha, &g);
 }

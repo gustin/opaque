@@ -4,22 +4,23 @@ use rand_os::OsRng;
 
 use x25519_dalek::EphemeralSecret;
 use x25519_dalek::PublicKey;
+use x25519_dalek::StaticSecret;
 
-use std::collections::HashMap;
 use lazy_static::lazy_static;
+use std::collections::HashMap;
+use std::sync::Mutex;
 
+#[derive(Clone)]
 pub struct Envelope {
-    pub priv_u: EphemeralSecret,
+    pub priv_u: StaticSecret,
     pub pub_u: PublicKey,
     pub pub_s: PublicKey,
 }
 
 lazy_static! {
-    static ref USER_MAP: HashMap<&'static str, Envelope> = {
-        HashMap::new()
-    };
+    static ref USER_MAP: Mutex<HashMap<String, Envelope>> =
+        { Mutex::new(HashMap::new()) };
 }
-
 
 pub struct RegistrationResult {
     pub beta: RistrettoPoint,
@@ -28,11 +29,15 @@ pub struct RegistrationResult {
 }
 
 pub struct AuthenticationResult {
-    pub v: Scalar,
+    pub beta: RistrettoPoint,
     pub env_u: Envelope,
+    pub v: Scalar,
 }
 
-pub fn registration(alpha: &RistrettoPoint, g: &Scalar) -> RegistrationResult {
+pub fn registration_1(
+    alpha: &RistrettoPoint,
+    g: &Scalar,
+) -> RegistrationResult {
     // Guard: Ensure alpha is in the Ristretto group
 
     // S chooses OPRF key kU (random and independent for each user U) and
@@ -79,21 +84,37 @@ pub fn registration(alpha: &RistrettoPoint, g: &Scalar) -> RegistrationResult {
     }
 }
 
-/*
-pub fn authentication(user_id: &str, g: &Scalar) -> AuthenticationResult {
+pub fn registration_2(username: &str, envelope: Envelope) {
+    USER_MAP
+        .lock()
+        .unwrap()
+        .insert(username.to_string(), envelope);
+    println!("Registering {:?}:", username);
+}
+
+pub fn authenticate_1(
+    username: &str,
+    alpha: &RistrettoPoint,
+    g: &Scalar,
+) -> AuthenticationResult {
     let mut cspring = OsRng::new().unwrap();
- //   let k = Scalar::random(&mut cspring);
-  //  let v = g * k;
-    //let beta = alpha * k;
+    let k = Scalar::random(&mut cspring);
+    let v = g * k;
+    let beta = alpha * k;
 
-    // look up EnvU by user_id
+    let envelope: Envelope =
+        USER_MAP.lock().unwrap().get(username).unwrap().clone();
 
-    let v = Scalar::random(&mut cspring);
+    // S to C: beta=alpha^kU, vU, EnvU, KE2
     AuthenticationResult {
-        v: v,
+        beta: beta,
         env_u: envelope,
+        v: v,
     }
-}*/
+}
+
+/*pub fn authenticate_step_2(
+*/
 
 #[cfg(test)]
 mod tests {
