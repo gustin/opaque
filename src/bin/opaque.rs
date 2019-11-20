@@ -2,13 +2,12 @@ use opaque::*;
 
 use rand_os::OsRng;
 
+use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use sha2::Sha512;
 
-use x25519_dalek::EphemeralSecret;
-use x25519_dalek::PublicKey;
-use x25519_dalek::StaticSecret;
+use ed25519_dalek::{Keypair, PublicKey, SecretKey, Signature};
 
 fn OPRF(alpha: &RistrettoPoint, g: &RistrettoPoint) -> RistrettoPoint {
     // OPAQUE uses a specific OPRF instantiation, called DH-OPRF, where the
@@ -150,7 +149,7 @@ fn DH() {
     // a^(p-1) = 1 (mod p)
     //
 
-    let mut cspring = OsRng::new().unwrap();
+    /*let mut cspring = OsRng::new().unwrap();
     let alice_secret = EphemeralSecret::new(&mut cspring);
     let alice_public = PublicKey::from(&alice_secret);
 
@@ -160,7 +159,7 @@ fn DH() {
     let alice_shared_secret = alice_secret.diffie_hellman(&bob_public);
     let bob_shared_secret = bob_secret.diffie_hellman(&alice_public);
     println!("Alice's Shared: {:?}", alice_shared_secret.as_bytes());
-    println!("Bob's Shared: {:?}", bob_shared_secret.as_bytes());
+    println!("Bob's Shared: {:?}", bob_shared_secret.as_bytes());*/
 }
 
 fn main() {
@@ -179,8 +178,10 @@ fn main() {
 
     // CSPRING: just using OS's PRNG for now
     let mut cspring = OsRng::new().unwrap();
-    let priv_u = StaticSecret::new(&mut cspring);
-    let pub_u = PublicKey::from(&priv_u);
+    let keypair: Keypair = Keypair::generate(&mut cspring);
+
+    let priv_u = keypair.secret.to_bytes();
+    let pub_u = keypair.public;
 
     // basic password for now
     let username = "barry";
@@ -198,7 +199,11 @@ fn main() {
     // Guard: alpha should be authenticated
     println!("Alpha {:?}:", alpha);
 
-    let (beta, v, pub_s) = registration_1(username, &alpha, &g);
+    // SIGMA-I
+    // KE1 = g^x - X25519(a, 9) where 9 is the u-coordinate of the base
+    // point and is encoded as a byte with value 9, followed by 31 zero bytes.
+    let ke_1 = r * RISTRETTO_BASEPOINT_POINT;
+    let (beta, v, pub_s) = registration_1(username, &alpha, &g, &ke_1);
     println!("Result beta: {:?} ", beta);
     println!("Result V: {:?} ", v);
 
@@ -250,4 +255,30 @@ fn main() {
     // C to S: Uid, alpha=H'(PwdU)*g^r, KE1
     // S to C: beta=alpha^kU, vU, EnvU, KE2
     let (beta_a, v_a, envelope_a) = authenticate_1(username, &alpha, &g);
+
+    // determine RwD
+    // decrypt EnvU using Rwd to obtain PrivU, PubU, PubS
+
+    // run the specified KE protocol using their respective public and
+    // private keys
+
+    // For the authenticated variant, the same computations are done; but Alice
+    // and Bob also own asymmetric key pairs usable for digital signatures, and
+    // they use them: Alice signs whatever she sends to Bob, and Bob verifies that
+    // signature (using Alice's public key). Similarly, Bob signs what he sends to
+    // Alice, and Alice verifies that signature (using Bob's public key).
+
+    /*
+       o  C to S: Uid, alpha=H'(PwdU)*g^r, KE1
+       o  S to C: beta=alpha^kU, vU, EnvU, KE2
+       o  C to S: KE3
+    */
+    /*
+    SIGMA-I can be represented schematically as follows:
+        o  KE1 = g^x
+        o  KE2 = g^y, Sig(PrivS; g^x, g^y), Mac(Km1; IdS)
+        o  KE3 = Sig(PrivU; g^y, g^x), Mac(Km2; IdU)
+        In this case, the private keys of user and server are signature keys.
+        Key derivation is based on the DH value g^xy.
+    */
 }

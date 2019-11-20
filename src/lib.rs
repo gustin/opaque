@@ -1,10 +1,11 @@
+
+use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
+use rand_core::RngCore;
 use rand_os::OsRng;
 
-use x25519_dalek::EphemeralSecret;
-use x25519_dalek::PublicKey;
-use x25519_dalek::StaticSecret;
+use ed25519_dalek::{Keypair, PublicKey, SecretKey, Signature};
 
 use lazy_static::lazy_static;
 use std::collections::HashMap;
@@ -12,7 +13,7 @@ use std::sync::Mutex;
 
 #[derive(Clone)]
 pub struct Envelope {
-    pub priv_u: StaticSecret,
+    pub priv_u: [u8; 32],
     pub pub_u: PublicKey,
     pub pub_s: PublicKey,
 }
@@ -34,6 +35,7 @@ pub fn registration_1(
     username: &str,
     alpha: &RistrettoPoint,
     g: &Scalar,
+    ke_1: &RistrettoPoint
 ) -> (RistrettoPoint, Scalar, PublicKey) {
     // Guard: Ensure alpha is in the Ristretto group
 
@@ -45,8 +47,7 @@ pub fn registration_1(
     // the same pair of keys with multiple users), and sends PubS to U.
 
     let mut cspring = OsRng::new().unwrap();
-    let priv_s = EphemeralSecret::new(&mut cspring);
-    let pub_s = PublicKey::from(&priv_s);
+    let keypair: Keypair = Keypair::generate(&mut cspring);
 
     // CSPRING: just using OS's PRNG for now
     //    let mut csprng: OsRng = OsRng::new().unwrap();
@@ -71,9 +72,8 @@ pub fn registration_1(
     // password check procedure to the client side is a more secure
     // alternative.
 
-    // CHANGE: k, v need to be stored along with envelope
-    let k = Scalar::random(&mut cspring);
-    let v = g * k;
+    let k = Scalar::random(&mut cspring); // salt
+    let v = g * k;  // salt 2, the public part of the private salt
     let beta = alpha * k;
     let user_record = UserRecord {
         envelope: None,
@@ -86,7 +86,16 @@ pub fn registration_1(
         .unwrap()
         .insert(username.to_string(), user_record);
 
-    (beta, v, pub_s)
+    //  SIGMA
+    //  KE2 = g^y, Sig(PrivS; g^x, g^y), Mac(Km1; IdS)
+    let ke_2: RistrettoPoint = k * RISTRETTO_BASEPOINT_POINT;
+    let message = ke_1 + ke_2;
+    let sig = keypair.sign(message.to_bytes());
+
+    // Mac(Km1; IdS)
+    // Km1 must be computationally independent from the authentication key
+
+    (beta, v, keypair.public)
 }
 
 pub fn registration_2(username: &str, envelope: Envelope) {
@@ -114,8 +123,10 @@ pub fn authenticate_1(
     (beta, user_record.v_u, user_record.envelope.unwrap())
 }
 
-/*pub fn authenticate_step_2(
-*/
+pub fn authenticate_step_2(username: &str) {
+
+}
+
 
 #[cfg(test)]
 mod tests {
