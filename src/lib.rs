@@ -1,5 +1,5 @@
-use bincode::{serialize, deserialize};
-use serde::{Serialize, Deserialize};
+use bincode::{deserialize, serialize};
+use serde::{Deserialize, Serialize};
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::RistrettoPoint;
@@ -13,7 +13,7 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Envelope {
     pub priv_u: [u8; 32],
     pub pub_u: [u8; 32],

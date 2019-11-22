@@ -1,6 +1,6 @@
 use opaque::*;
 
-use bincode::{serialize, deserialize};
+use bincode::{deserialize, serialize};
 use rand_os::OsRng;
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
@@ -287,8 +287,9 @@ fn main() {
         pub_s: pub_s,
     };
 
-    // HMAC-based Extract-and-Expand:https://tools.ietf.org/html/rfc5869
-    // see to salt or not to salt, currently not salting
+    println!("Envelope {:?}:2", envelope);
+    // HKDF: HMAC-based Extract-and-Expand:https://tools.ietf.org/html/rfc5869
+    // see section on to "salt or not to salt", currently not salting
     let hkdf = Hkdf::<Sha512>::new(None, &rwd_u);
     let mut output_key_material = [0u8; 44]; // 32 byte key + 96 bit nonce
     let info = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap();
@@ -316,28 +317,48 @@ fn main() {
 
     // C to S: Uid, alpha=H'(PwdU)*g^r, KE1
 
+    let pwd_u_a = "fzzbangpop";
     let r_a = Scalar::random(&mut cspring);
     let hash_prime_a =
         RistrettoPoint::hash_from_bytes::<Sha3_512>(pwd_u.as_bytes());
-    let alpha_a: RistrettoPoint = hash_prime * r;
+    let alpha_a: RistrettoPoint = hash_prime_a * r_a;
 
     // S to C: beta=alpha^kU, vU, EnvU, KE2
-    let (beta_a, v_a, envelope_a) = authenticate_1(username, &alpha_a);
+    // spec: alpha=(H'(x))^r in the first message and set the
+    //      function output to H(x,v,beta^{1/r})
 
-    // determine RwD
-    // decrypt EnvU using Rwd to obtain PrivU, PubU, PubS
+    let (beta_a, v_a, envelope_a) = authenticate_1(username, &alpha_a);
 
     let inverse_r_a = r_a.invert();
     let sub_beta_a = beta_a * inverse_r_a;
 
     let mut hasher_a = Sha3_512::new();
-    hasher_a.input(r.to_bytes());
-    hasher_a.input(v.compress().to_bytes());
-    hasher_a.input(sub_beta.compress().to_bytes());
+    hasher_a.input(r_a.to_bytes());
+    hasher_a.input(v_a.compress().to_bytes());
+    hasher_a.input(sub_beta_a.compress().to_bytes());
     let rwd_u_a = hasher_a.result();
 
     println!("Rwd Authentication {:?}:", rwd_u_a);
 
+    // Use rwd_u_a to decrypt envelope
+
+    let hkdf_a = Hkdf::<Sha512>::new(None, &rwd_u_a);
+    let mut okm_a = [0u8; 44]; // 32 byte key + 96 bit nonce
+    let info_a = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap();
+    hkdf_a.expand(&info_a, &mut okm_a).unwrap();
+
+    let encryption_key_a: GenericArray<u8, typenum::U32> =
+        GenericArray::clone_from_slice(&okm_a[0..32]);
+    let aead = Aes256GcmSiv::new(encryption_key_a);
+    let nonce_a: GenericArray<u8, typenum::U12> =
+        GenericArray::clone_from_slice(&okm_a[32..44]);
+
+    let envelope_decrypted =
+        aead.decrypt(&nonce, envelope_a.as_slice()).expect("decryption failure");
+    let envelope_for_realz: Envelope =
+        bincode::deserialize(envelope_decrypted.as_slice()).unwrap();
+
+    println!("Decoded Envelope {:?}:",  envelope_for_realz);
     // run the specified KE protocol using their respective public and
     // private keys
 
