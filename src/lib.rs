@@ -1,3 +1,6 @@
+use bincode::{serialize, deserialize};
+use serde::{Serialize, Deserialize};
+
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
@@ -10,11 +13,11 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Envelope {
     pub priv_u: [u8; 32],
-    pub pub_u: PublicKey,
-    pub pub_s: PublicKey,
+    pub pub_u: [u8; 32],
+    pub pub_s: [u8; 32],
 }
 
 #[derive(Clone)]
@@ -33,7 +36,7 @@ pub fn registration_1(
     username: &str,
     alpha: &RistrettoPoint,
     ke_1: &RistrettoPoint,
-) -> (RistrettoPoint, RistrettoPoint, PublicKey) {
+) -> (RistrettoPoint, RistrettoPoint, [u8; 32]) {
     // Guard: Ensure alpha is in the Ristretto group
 
     // S chooses OPRF key kU (random and independent for each user U) and
@@ -92,7 +95,7 @@ pub fn registration_1(
     // Mac(Km1; IdS)
     // Km1 must be computationally independent from the authentication key
 
-    (beta, v, keypair.public)
+    (beta, v, keypair.public.to_bytes())
 }
 
 pub fn registration_2(username: &str, envelope: Envelope) {

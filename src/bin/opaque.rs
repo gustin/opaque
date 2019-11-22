@@ -1,5 +1,6 @@
 use opaque::*;
 
+use bincode::{serialize, deserialize};
 use rand_os::OsRng;
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
@@ -200,7 +201,7 @@ fn main() {
     let keypair: Keypair = Keypair::generate(&mut cspring);
 
     let priv_u = keypair.secret.to_bytes();
-    let pub_u = keypair.public;
+    let pub_u = keypair.public.to_bytes();
 
     // basic password for now
     let username = "barry";
@@ -249,6 +250,7 @@ fn main() {
     // PwdU").
 
     let mut hasher = Sha3_512::new();
+    // assuming multiple inputs create a unique hash not just concating, verse serializing
     hasher.input(r.to_bytes());
     hasher.input(v.compress().to_bytes());
     hasher.input(sub_beta.compress().to_bytes());
@@ -286,8 +288,9 @@ fn main() {
     };
 
     // HMAC-based Extract-and-Expand:https://tools.ietf.org/html/rfc5869
+    // see to salt or not to salt, currently not salting
     let hkdf = Hkdf::<Sha512>::new(None, &rwd_u);
-    let mut output_key_material = [0u8; 44];
+    let mut output_key_material = [0u8; 44]; // 32 byte key + 96 bit nonce
     let info = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap();
     hkdf.expand(&info, &mut output_key_material).unwrap();
 
@@ -300,10 +303,11 @@ fn main() {
     let aead = Aes256GcmSiv::new(encryption_key);
     let nonce: GenericArray<u8, typenum::U12> =
         GenericArray::clone_from_slice(&output_key_material[32..44]);
-    //    let ciphertext = aead.encrypt(nonce, enveloper
 
+    let payload: Vec<u8> = serialize(&envelope).unwrap();
+    let ciphertext = aead.encrypt(&nonce, payload.as_slice()).unwrap();
 
-    //println!("Cipher Envelope {:?} :", ciphertext);*/
+    println!("Cipher Envelope {:?} :", ciphertext);
 
     // Section 3.1.1 Implementing the EnvU envelop
 
