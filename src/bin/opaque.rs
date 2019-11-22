@@ -6,18 +6,22 @@ use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 
-use aes::Aes128;
-/*
- * -- aes-soft hardware independent bit-sliced implementation
- * -- aesni implementation using AES-NI instruction set. Used for x86-64 and
- * x86 target architectures with enabled aes and sse2 target features (the latter
- * is usually enabled by default).
- *
- * NOTE: Crate switches between implementations automatically at compile
- * time. (i.e. it does not use run-time feature detection)
-*/
+use aes_gcm_siv::aead::{generic_array::GenericArray, Aead, NewAead, Payload};
+use aes_gcm_siv::Aes256GcmSiv;
 
-use hmac::{Hmac, Mac};
+// Warning: No security audits of the AES-GCM-Siv crate have ever been performed,
+// and it has not been thoroughly assessed to ensure its operation is
+// constant-time on common CPU architectures.
+
+// Where possible the implementation uses constant-time hardware intrinsics,
+// or otherwise falls back to an implementation which contains no
+// secret-dependent branches or table lookups, however it's possible LLVM
+// may insert such operations in certain scenarios.
+
+// When targeting modern x86/x86_64 CPUs, use RUSTFLAGS to take advantage
+// of high performance AES-NI and CLMUL CPU intrinsics
+
+use hkdf::Hkdf;
 use sha2::Sha512;
 use sha3::{Digest, Sha3_512};
 
@@ -264,7 +268,6 @@ fn main() {
     // for running the key-exchange protocol by the client or if it can
     // be reconstructed from PrivU.
 
-
     // Encrypt-then-HMAC: Implement the AuthEnc scheme using any
     // encryption function in encrypt-then-pad-then-MAC mode where the
     // MAC is implemented with HMAC with a tag size of at least 256 bits (HMAC
@@ -273,25 +276,36 @@ fn main() {
     // encryption and one for HMAC, which can be derived from RwdU using,
     // for example, the HKDF-Expand function from [RFC5869].
 
+    // Encrypt-then-Mac: https://tools.ietf.org/html/rfc7
+    // https://signal.org/docs/specifications/doubleratchet/#recommended-cryptographic-algorithms
+
     let envelope = Envelope {
         priv_u: priv_u,
         pub_u: pub_u,
         pub_s: pub_s,
     };
 
+    // HMAC-based Extract-and-Expand:https://tools.ietf.org/html/rfc5869
+    let hkdf = Hkdf::<Sha512>::new(None, &rwd_u);
+    let mut output_key_material = [0u8; 44];
+    let info = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap();
+    hkdf.expand(&info, &mut output_key_material).unwrap();
 
-    let cipher = Aes128::new(&key);
+    println!("OKM is {}", hex::encode(&output_key_material[..]));
 
-    let mut mac = HmacSha256::new_varkey(b"my secret and secure key")
-        .expect("HMAC can take key of any size");
-    mac.input(b"input message");
+    // AES-GCM-SIV
+
+    let encryption_key: GenericArray<u8, typenum::U32> =
+        GenericArray::clone_from_slice(&output_key_material[0..32]);
+    let aead = Aes256GcmSiv::new(encryption_key);
+    let nonce: GenericArray<u8, typenum::U12> =
+        GenericArray::clone_from_slice(&output_key_material[32..44]);
+    //    let ciphertext = aead.encrypt(nonce, enveloper
 
 
+    //println!("Cipher Envelope {:?} :", ciphertext);*/
 
     // Section 3.1.1 Implementing the EnvU envelop
-
-    // HMAC this and encrypt, AES of some form with RwdU (rwd_u) being the
-    // key
 
     // U sends EnvU and PubU to S and erases PwdU, RwdU and all keys.
     registration_2(username, envelope);
