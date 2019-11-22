@@ -22,7 +22,7 @@ pub struct Envelope {
 
 #[derive(Clone)]
 struct UserRecord {
-    envelope: Option<Envelope>,
+    envelope: Option<Vec<u8>>,
     k_u: Scalar,
     v_u: RistrettoPoint,
 }
@@ -98,10 +98,10 @@ pub fn registration_1(
     (beta, v, keypair.public.to_bytes())
 }
 
-pub fn registration_2(username: &str, envelope: Envelope) {
+pub fn registration_2(username: &str, envelope: &Vec<u8>) {
     let mut user_record: UserRecord =
         USER_MAP.lock().unwrap().get(username).unwrap().clone();
-    user_record.envelope = Some(envelope);
+    user_record.envelope = Some(envelope.to_vec());
     USER_MAP
         .lock()
         .unwrap()
@@ -112,7 +112,7 @@ pub fn registration_2(username: &str, envelope: Envelope) {
 pub fn authenticate_1(
     username: &str,
     alpha: &RistrettoPoint,
-) -> (RistrettoPoint, RistrettoPoint, Envelope) {
+) -> (RistrettoPoint, RistrettoPoint, Vec<u8>) {
     let user_record: UserRecord =
         USER_MAP.lock().unwrap().get(username).unwrap().clone();
 

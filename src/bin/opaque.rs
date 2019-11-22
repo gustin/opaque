@@ -305,14 +305,14 @@ fn main() {
         GenericArray::clone_from_slice(&output_key_material[32..44]);
 
     let payload: Vec<u8> = serialize(&envelope).unwrap();
-    let ciphertext = aead.encrypt(&nonce, payload.as_slice()).unwrap();
+    let env_cipher = aead.encrypt(&nonce, payload.as_slice()).unwrap();
 
-    println!("Cipher Envelope {:?} :", ciphertext);
+    println!("Cipher Envelope {:?} :", env_cipher);
 
     // Section 3.1.1 Implementing the EnvU envelop
 
     // U sends EnvU and PubU to S and erases PwdU, RwdU and all keys.
-    registration_2(username, envelope);
+    registration_2(username, &env_cipher);
 
     // C to S: Uid, alpha=H'(PwdU)*g^r, KE1
 
