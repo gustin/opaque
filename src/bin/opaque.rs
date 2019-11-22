@@ -5,6 +5,7 @@ use rand_os::OsRng;
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
+use sha2::Sha512;
 use sha3::{Digest, Sha3_512};
 
 use ed25519_dalek::{Keypair, PublicKey, SecretKey, Signature};
@@ -228,8 +229,11 @@ fn main() {
 
     let mut hasher = Sha3_512::new();
     hasher.input(r.to_bytes());
-    hasher.input(v);
-    hasher.input(sub_beta);
+    hasher.input(v.compress().to_bytes());
+    hasher.input(sub_beta.compress().to_bytes());
+    let rwd_u = hasher.result();
+
+    println!("Rwd U: {:?}:", rwd_u);
 
     // U and S run OPRF(kU;PwdU) as defined in Section 2 with only U
     // learning the result, denoted RwdU (mnemonics for "Randomized
