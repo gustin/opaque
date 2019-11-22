@@ -251,7 +251,7 @@ fn main() {
 
     let mut hasher = Sha3_512::new();
     // assuming multiple inputs create a unique hash not just concating, verse serializing
-    hasher.input(r.to_bytes());
+    hasher.input(pwd_u.as_bytes());
     hasher.input(v.compress().to_bytes());
     hasher.input(sub_beta.compress().to_bytes());
     let rwd_u = hasher.result();
@@ -333,7 +333,7 @@ fn main() {
     let sub_beta_a = beta_a * inverse_r_a;
 
     let mut hasher_a = Sha3_512::new();
-    hasher_a.input(r_a.to_bytes());
+    hasher_a.input(pwd_u.as_bytes());
     hasher_a.input(v_a.compress().to_bytes());
     hasher_a.input(sub_beta_a.compress().to_bytes());
     let rwd_u_a = hasher_a.result();
