@@ -227,6 +227,10 @@ fn main() {
     // attack with non-injectivity of concatenation:
     // https://sakurity.com/blog/2015/05/08/pusher.html
 
+    // U and S run OPRF(kU;PwdU) as defined in Section 2 with only U
+    // learning the result, denoted RwdU (mnemonics for "Randomized
+    // PwdU").
+
     let mut hasher = Sha3_512::new();
     hasher.input(r.to_bytes());
     hasher.input(v.compress().to_bytes());
@@ -234,12 +238,6 @@ fn main() {
     let rwd_u = hasher.result();
 
     println!("Rwd U: {:?}:", rwd_u);
-
-    // U and S run OPRF(kU;PwdU) as defined in Section 2 with only U
-    // learning the result, denoted RwdU (mnemonics for "Randomized
-    // PwdU").
-
-    //    let rwd_u = blake2(
 
     // U generates an "envelope" EnvU defined as
     // EnvU = AuthEnc(RwdU; PrivU, PubU, PubS)
@@ -268,11 +266,28 @@ fn main() {
     registration_2(username, envelope);
 
     // C to S: Uid, alpha=H'(PwdU)*g^r, KE1
+
+    let r_a = Scalar::random(&mut cspring);
+    let hash_prime_a =
+        RistrettoPoint::hash_from_bytes::<Sha3_512>(pwd_u.as_bytes());
+    let alpha_a: RistrettoPoint = hash_prime * r;
+
     // S to C: beta=alpha^kU, vU, EnvU, KE2
-    let (beta_a, v_a, envelope_a) = authenticate_1(username, &alpha);
+    let (beta_a, v_a, envelope_a) = authenticate_1(username, &alpha_a);
 
     // determine RwD
     // decrypt EnvU using Rwd to obtain PrivU, PubU, PubS
+
+    let inverse_r_a = r_a.invert();
+    let sub_beta_a = beta_a * inverse_r_a;
+
+    let mut hasher_a = Sha3_512::new();
+    hasher_a.input(r.to_bytes());
+    hasher_a.input(v.compress().to_bytes());
+    hasher_a.input(sub_beta.compress().to_bytes());
+    let rwd_u_a = hasher_a.result();
+
+    println!("Rwd Authentication {:?}:", rwd_u_a);
 
     // run the specified KE protocol using their respective public and
     // private keys
