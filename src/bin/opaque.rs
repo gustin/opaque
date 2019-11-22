@@ -207,27 +207,34 @@ fn main() {
     let username = "barry";
     let pwd_u = "fizzbangpopdog";
 
+    println!("-------------------------------------------------------");
+    println!("~)-------------------| Registering :-> usename: {} : password: {} <--------", username, pwd_u);
     //  Protocol for computing DH-OPRF, U with input x and S with input k:
     //  U: choose random r in [0..q-1], send alpha=H'(x)*g^r to S
 
     // The simplified form with the base point factor dropped:
     // spec: alpha=(H'(x))^r in the first message and set the
     //      function output to H(x,v,beta^{1/r})
+    println!("*) alpha=(H'(x)^r");
     let r = Scalar::random(&mut cspring);
     let hash_prime =
         RistrettoPoint::hash_from_bytes::<Sha3_512>(pwd_u.as_bytes());
     let alpha: RistrettoPoint = hash_prime * r;
     // Guard: alpha should be authenticated when sent
-    println!("Alpha {:?}:", alpha);
+    println!("-) r {:?}:", r);
+    println!("-) H' {:?}:", hash_prime);
+    println!("-) alpha {:?}:", alpha);
 
     // SIGMA-I
     // KE1 = g^x - X25519(a, 9) where 9 is the u-coordinate of the base
     // point and is encoded as a byte with value 9, followed by 31 zero bytes.
     let x = Scalar::random(&mut cspring);
     let ke_1 = x * RISTRETTO_BASEPOINT_POINT;
+
     let (beta, v, pub_s) = registration_1(username, &alpha, &ke_1);
-    println!("Result beta: {:?} ", beta);
-    println!("Result V: {:?} ", v);
+    println!("-) beta: {:?} ", beta);
+    println!("-) v: {:?} ", v);
+    println!("-) PubS {:?}:", pub_s);
 
     // Guard: Ensure v and beta are in the Group
 
@@ -240,6 +247,9 @@ fn main() {
     let inverse_r = r.invert();
     let sub_beta = beta * inverse_r;
 
+    println!("-) {{1/r}} {:?}:", inverse_r);
+    println!("-) beta^{{1/r}} {:?}:", sub_beta);
+
     // serialize then hash:
     // https://jameshfisher.com/2018/01/09/how-to-hash-multiple-values/
     // attack with non-injectivity of concatenation:
@@ -249,6 +259,7 @@ fn main() {
     // learning the result, denoted RwdU (mnemonics for "Randomized
     // PwdU").
 
+    println!("*) H(x, v, beta^{{1/r}}");
     let mut hasher = Sha3_512::new();
     // assuming multiple inputs create a unique hash not just concating, verse serializing
     hasher.input(pwd_u.as_bytes());
@@ -256,7 +267,7 @@ fn main() {
     hasher.input(sub_beta.compress().to_bytes());
     let rwd_u = hasher.result();
 
-    println!("Rwd U: {:?}:", rwd_u);
+    println!("-) RwdU: {:?}:", rwd_u);
 
     // U generates an "envelope" EnvU defined as
     // EnvU = AuthEnc(RwdU; PrivU, PubU, PubS)
@@ -287,7 +298,7 @@ fn main() {
         pub_s: pub_s,
     };
 
-    println!("Envelope {:?}:2", envelope);
+    println!("=) EnvU {:?}:2", envelope);
     // HKDF: HMAC-based Extract-and-Expand:https://tools.ietf.org/html/rfc5869
     // see section on to "salt or not to salt", currently not salting
     let hkdf = Hkdf::<Sha512>::new(None, &rwd_u);
@@ -295,7 +306,7 @@ fn main() {
     let info = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap();
     hkdf.expand(&info, &mut output_key_material).unwrap();
 
-    println!("OKM is {}", hex::encode(&output_key_material[..]));
+    println!("-) Hkdf Okm is {}", hex::encode(&output_key_material[..]));
 
     // AES-GCM-SIV
 
@@ -308,7 +319,9 @@ fn main() {
     let payload: Vec<u8> = serialize(&envelope).unwrap();
     let env_cipher = aead.encrypt(&nonce, payload.as_slice()).unwrap();
 
-    println!("Cipher Envelope {:?} :", env_cipher);
+    println!("-) encryption key 32-byte {:?}:", encryption_key);
+    println!("-) nonce 96 bit {:?}:", nonce);
+    println!("-) AuthEnv: AES-GCM-SIV Cipher Envelope {:?} :", env_cipher);
 
     // Section 3.1.1 Implementing the EnvU envelop
 
@@ -317,11 +330,19 @@ fn main() {
 
     // C to S: Uid, alpha=H'(PwdU)*g^r, KE1
 
-    let pwd_u_a = "fzzbangpop";
+    //let pwd_u_a = "fzzbangpop";
+    let pwd_u_a = pwd_u;
+
+    println!("~) ---------------------| Authenticating: -> usename: {} : password: {} <--------", username, pwd_u);
+
+    println!("*) alpha=(H'(x)^r");
     let r_a = Scalar::random(&mut cspring);
     let hash_prime_a =
-        RistrettoPoint::hash_from_bytes::<Sha3_512>(pwd_u.as_bytes());
+        RistrettoPoint::hash_from_bytes::<Sha3_512>(pwd_u_a.as_bytes());
     let alpha_a: RistrettoPoint = hash_prime_a * r_a;
+    println!("-) r {:?}:", r_a);
+    println!("-) H' {:?}:", hash_prime_a);
+    println!("-) alpha {:?}:", alpha_a);
 
     // S to C: beta=alpha^kU, vU, EnvU, KE2
     // spec: alpha=(H'(x))^r in the first message and set the
@@ -329,16 +350,25 @@ fn main() {
 
     let (beta_a, v_a, envelope_a) = authenticate_1(username, &alpha_a);
 
+    println!("-) beta {:?}:", beta_a);
+    println!("-) v {:?}:", v_a);
+    println!("-) AuthEnv {:?}:", envelope_a);
+
     let inverse_r_a = r_a.invert();
     let sub_beta_a = beta_a * inverse_r_a;
 
+    println!("-) {{1/r}} {:?}:", inverse_r_a);
+    println!("-) beta^{{1/r}} {:?}:", sub_beta_a);
+
+    println!("*) H(x, v, beta^{{1/r}})");
+
     let mut hasher_a = Sha3_512::new();
-    hasher_a.input(pwd_u.as_bytes());
+    hasher_a.input(pwd_u_a.as_bytes());
     hasher_a.input(v_a.compress().to_bytes());
     hasher_a.input(sub_beta_a.compress().to_bytes());
     let rwd_u_a = hasher_a.result();
 
-    println!("Rwd Authentication {:?}:", rwd_u_a);
+    println!("-) Rwd U {:?}:", rwd_u_a);
 
     // Use rwd_u_a to decrypt envelope
 
@@ -347,18 +377,25 @@ fn main() {
     let info_a = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap();
     hkdf_a.expand(&info_a, &mut okm_a).unwrap();
 
+    println!("-) HKDF OKM {}", hex::encode(&okm_a[..]));
+
     let encryption_key_a: GenericArray<u8, typenum::U32> =
         GenericArray::clone_from_slice(&okm_a[0..32]);
     let aead = Aes256GcmSiv::new(encryption_key_a);
     let nonce_a: GenericArray<u8, typenum::U12> =
         GenericArray::clone_from_slice(&okm_a[32..44]);
 
+    println!("-) encryption key 32-byte {:?}:", encryption_key_a);
+    println!("-) nonce 96 bit {:?}:", nonce_a);
+
     let envelope_decrypted =
         aead.decrypt(&nonce, envelope_a.as_slice()).expect("decryption failure");
     let envelope_for_realz: Envelope =
         bincode::deserialize(envelope_decrypted.as_slice()).unwrap();
 
-    println!("Decoded Envelope {:?}:",  envelope_for_realz);
+    println!("=) EnvU (decoded) {:?}:",  envelope_for_realz);
+
+    authenticate_2(username);
     // run the specified KE protocol using their respective public and
     // private keys
 

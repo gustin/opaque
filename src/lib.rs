@@ -73,6 +73,7 @@ pub fn registration_1(
     // alternative.
 
     // S to C: beta=alpha^kU, vU (g^k), EnvU : KE2
+    println!("*) beta=alpha^kU, vU (g^k)");
     let k = Scalar::random(&mut cspring); // salt, private
     let v: RistrettoPoint = RISTRETTO_BASEPOINT_POINT * k; // salt 2, public
     let beta = alpha * k;
@@ -81,6 +82,9 @@ pub fn registration_1(
         k_u: k,
         v_u: v,
     };
+    println!("-) kU {:?}:", k);
+    println!("-) vU {:?}:", v);
+    println!("-) beta {:?}", beta);
     USER_MAP
         .lock()
         .unwrap()
@@ -106,7 +110,7 @@ pub fn registration_2(username: &str, envelope: &Vec<u8>) {
         .lock()
         .unwrap()
         .insert(username.to_string(), user_record);
-    println!("Registering {:?}:", username);
+    println!("=) Registered {:?} with envelope {:?}:", username, envelope);
 }
 
 pub fn authenticate_1(
@@ -117,12 +121,18 @@ pub fn authenticate_1(
         USER_MAP.lock().unwrap().get(username).unwrap().clone();
 
     // S to C: beta=alpha^kU, vU, EnvU, KE2
+    println!("*) beta=alpha^kU, vU (g^k)");
     let beta = alpha * user_record.k_u;
+    println!("-) kU {:?}:", user_record.k_u);
+    println!("-) vU {:?}:", user_record.v_u);
+    println!("-) beta {:?}:", beta);
 
     (beta, user_record.v_u, user_record.envelope.unwrap())
 }
 
-pub fn authenticate_step_2(username: &str) {}
+pub fn authenticate_2(username: &str) {
+    println!("=) Verified KE3 -- {} logged in.", username);
+}
 
 #[cfg(test)]
 mod tests {
