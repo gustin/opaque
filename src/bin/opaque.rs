@@ -5,7 +5,7 @@ use rand_os::OsRng;
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
-use sha2::Sha512;
+use sha3::{Digest, Sha3_512};
 
 use ed25519_dalek::{Keypair, PublicKey, SecretKey, Signature};
 
@@ -53,7 +53,7 @@ fn OPRF(alpha: &RistrettoPoint, g: &RistrettoPoint) -> RistrettoPoint {
     // curve point.
     // RistrettoPoint::from_hash()
     //   let msg = "plaintext";
-    //    let hash_prime = RistrettoPoint::hash_from_bytes::<Sha512>(msg.as_bytes());
+    //    let hash_prime = RistrettoPoint::hash_from_bytes::<>(msg.as_bytes());
     //    println!("Ristretto Point from hash prime function: {:?}", hash_prime);
 
     // DH-OPRF domain: any string
@@ -64,8 +64,8 @@ fn OPRF(alpha: &RistrettoPoint, g: &RistrettoPoint) -> RistrettoPoint {
     // -> what is the range of the blake2? is it 512? 2^512
 
     // DH-OPRF key: A random element k in [0..q-1]; denote v=g^k
-    // -> This is the key the server generates to feed the OPRF, I think
-    // the salt, v is the DH in the DH-OPRF, is k scalar, g is a point?
+    // -> This is the key the server generates to feed the OPRF.
+    // The salt, v is the DH in the DH-OPRF
 
     // ***> Spec
 
@@ -85,13 +85,15 @@ fn OPRF(alpha: &RistrettoPoint, g: &RistrettoPoint) -> RistrettoPoint {
     let v = g * k;
     let beta = alpha * k;
     return beta;
+
+    // alpha=(H'(x))^r in the first message and set the
+    // function output to H(x,v,beta^{1/r})
 }
 
 // https://tools.ietf.org/html/rfc7748
 /*
     6.  Diffie-Hellman
-
-    6.1.  Curve25519
+6.1.  Curve25519
 
     The X25519 function can be used in an Elliptic Curve Diffie-Hellman
     (ECDH) protocol as follows:
@@ -122,8 +124,7 @@ fn OPRF(alpha: &RistrettoPoint, g: &RistrettoPoint) -> RistrettoPoint {
 
     Test vector:
 
-    Alice's private key, a:
-        77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a
+    Alice's private key, a: 77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a
     Alice's public key, X25519(a, 9):
         8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a
     Bob's private key, b:
@@ -190,20 +191,22 @@ fn main() {
     //  Protocol for computing DH-OPRF, U with input x and S with input k:
     //  U: choose random r in [0..q-1], send alpha=H'(x)*g^r to S
 
-    let g = Scalar::random(&mut cspring);
+    // The simplified form with the base point factor dropped:
+    // spec: alpha=(H'(x))^r in the first message and set the
+    //      function output to H(x,v,beta^{1/r})
     let r = Scalar::random(&mut cspring);
-    let sub: Scalar = g * r;
     let hash_prime =
-        RistrettoPoint::hash_from_bytes::<Sha512>(pwd_u.as_bytes());
-    let alpha = hash_prime * sub;
-    // Guard: alpha should be authenticated
+        RistrettoPoint::hash_from_bytes::<Sha3_512>(pwd_u.as_bytes());
+    let alpha: RistrettoPoint = hash_prime * r;
+    // Guard: alpha should be authenticated when sent
     println!("Alpha {:?}:", alpha);
 
     // SIGMA-I
     // KE1 = g^x - X25519(a, 9) where 9 is the u-coordinate of the base
     // point and is encoded as a byte with value 9, followed by 31 zero bytes.
-    let ke_1 = r * RISTRETTO_BASEPOINT_POINT;
-    let (beta, v, pub_s) = registration_1(username, &alpha, &g, &ke_1);
+    let x = Scalar::random(&mut cspring);
+    let ke_1 = x * RISTRETTO_BASEPOINT_POINT;
+    let (beta, v, pub_s) = registration_1(username, &alpha, &ke_1);
     println!("Result beta: {:?} ", beta);
     println!("Result V: {:?} ", v);
 
@@ -212,13 +215,21 @@ fn main() {
     // U: upon receiving values beta and v, set the PRF output to
     // H(x, v, beta*v^{-r})
 
+    // simplified:
+    //  set the function output to H(x,v,beta^{1/r})
+
     let inverse_r = r.invert();
-    let sub_beta = beta * v * inverse_r;
+    let sub_beta = beta * inverse_r;
 
     // serialize then hash:
     // https://jameshfisher.com/2018/01/09/how-to-hash-multiple-values/
     // attack with non-injectivity of concatenation:
     // https://sakurity.com/blog/2015/05/08/pusher.html
+
+    let mut hasher = Sha3_512::new();
+    hasher.input(r.to_bytes());
+    hasher.input(v);
+    hasher.input(sub_beta);
 
     // U and S run OPRF(kU;PwdU) as defined in Section 2 with only U
     // learning the result, denoted RwdU (mnemonics for "Randomized
@@ -254,7 +265,7 @@ fn main() {
 
     // C to S: Uid, alpha=H'(PwdU)*g^r, KE1
     // S to C: beta=alpha^kU, vU, EnvU, KE2
-    let (beta_a, v_a, envelope_a) = authenticate_1(username, &alpha, &g);
+    let (beta_a, v_a, envelope_a) = authenticate_1(username, &alpha);
 
     // determine RwD
     // decrypt EnvU using Rwd to obtain PrivU, PubU, PubS

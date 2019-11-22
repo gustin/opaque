@@ -21,9 +21,8 @@ pub struct Envelope {
 #[derive(Clone)]
 struct UserRecord {
     envelope: Option<Envelope>,
-    g: Scalar,
     k_u: Scalar,
-    v_u: Scalar,
+    v_u: RistrettoPoint,
 }
 
 lazy_static! {
@@ -34,9 +33,8 @@ lazy_static! {
 pub fn registration_1(
     username: &str,
     alpha: &RistrettoPoint,
-    g: &Scalar,
     ke_1: &RistrettoPoint
-) -> (RistrettoPoint, Scalar, PublicKey) {
+) -> (RistrettoPoint, RistrettoPoint, PublicKey) {
     // Guard: Ensure alpha is in the Ristretto group
 
     // S chooses OPRF key kU (random and independent for each user U) and
@@ -72,12 +70,12 @@ pub fn registration_1(
     // password check procedure to the client side is a more secure
     // alternative.
 
-    let k = Scalar::random(&mut cspring); // salt
-    let v = g * k;  // salt 2, the public part of the private salt
+    // S to C: beta=alpha^kU, vU (g^k), EnvU : KE2
+    let k = Scalar::random(&mut cspring); // salt, private
+    let v: RistrettoPoint = RISTRETTO_BASEPOINT_POINT * k;  // salt 2, public
     let beta = alpha * k;
     let user_record = UserRecord {
         envelope: None,
-        g: *g,
         k_u: k,
         v_u: v,
     };
@@ -90,7 +88,7 @@ pub fn registration_1(
     //  KE2 = g^y, Sig(PrivS; g^x, g^y), Mac(Km1; IdS)
     let ke_2: RistrettoPoint = k * RISTRETTO_BASEPOINT_POINT;
     let message = ke_1 + ke_2;
-    let sig = keypair.sign(message.to_bytes());
+//    let sig = keypair.sign(message.to_bytes());
 
     // Mac(Km1; IdS)
     // Km1 must be computationally independent from the authentication key
@@ -111,9 +109,8 @@ pub fn registration_2(username: &str, envelope: Envelope) {
 
 pub fn authenticate_1(
     username: &str,
-    alpha: &RistrettoPoint,
-    g: &Scalar,
-) -> (RistrettoPoint, Scalar, Envelope) {
+    alpha: &RistrettoPoint
+) -> (RistrettoPoint, RistrettoPoint, Envelope) {
     let user_record: UserRecord =
         USER_MAP.lock().unwrap().get(username).unwrap().clone();
 
