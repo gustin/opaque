@@ -5,6 +5,19 @@ use rand_os::OsRng;
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
+
+use aes::Aes128;
+/*
+ * -- aes-soft hardware independent bit-sliced implementation
+ * -- aesni implementation using AES-NI instruction set. Used for x86-64 and
+ * x86 target architectures with enabled aes and sse2 target features (the latter
+ * is usually enabled by default).
+ *
+ * NOTE: Crate switches between implementations automatically at compile
+ * time. (i.e. it does not use run-time feature detection)
+*/
+
+use hmac::{Hmac, Mac};
 use sha2::Sha512;
 use sha3::{Digest, Sha3_512};
 
@@ -251,11 +264,29 @@ fn main() {
     // for running the key-exchange protocol by the client or if it can
     // be reconstructed from PrivU.
 
+
+    // Encrypt-then-HMAC: Implement the AuthEnc scheme using any
+    // encryption function in encrypt-then-pad-then-MAC mode where the
+    // MAC is implemented with HMAC with a tag size of at least 256 bits (HMAC
+    // ensures robustness through the collision-resistant property of the
+    // underlying hash function).  This requires two separate keys, one for
+    // encryption and one for HMAC, which can be derived from RwdU using,
+    // for example, the HKDF-Expand function from [RFC5869].
+
     let envelope = Envelope {
         priv_u: priv_u,
         pub_u: pub_u,
         pub_s: pub_s,
     };
+
+
+    let cipher = Aes128::new(&key);
+
+    let mut mac = HmacSha256::new_varkey(b"my secret and secure key")
+        .expect("HMAC can take key of any size");
+    mac.input(b"input message");
+
+
 
     // Section 3.1.1 Implementing the EnvU envelop
 

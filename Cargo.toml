@@ -5,8 +5,10 @@ authors = ["gustin <gustin@mycelium.dev>"]
 edition = "2018"
 
 [dependencies]
+aes = "0.3.2"
 curve25519-dalek = "1.2.3"
 ed25519-dalek = "1.0.0-pre.1"
+hmac = "0.7.1"
 lazy_static = "1.4.0"
 rand_core = "0.3.1"
 rand_os = "0.1.3"
