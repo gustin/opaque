@@ -35,7 +35,6 @@ lazy_static! {
 pub fn registration_1(
     username: &str,
     alpha: &RistrettoPoint,
-    ke_1: &RistrettoPoint,
 ) -> (RistrettoPoint, RistrettoPoint, [u8; 32]) {
     // Guard: Ensure alpha is in the Ristretto group
 
@@ -90,15 +89,6 @@ pub fn registration_1(
         .unwrap()
         .insert(username.to_string(), user_record);
 
-    //  SIGMA
-    //  KE2 = g^y, Sig(PrivS; g^x, g^y), Mac(Km1; IdS)
-    let ke_2: RistrettoPoint = k * RISTRETTO_BASEPOINT_POINT;
-    let message = ke_1 + ke_2;
-    //    let sig = keypair.sign(message.to_bytes());
-
-    // Mac(Km1; IdS)
-    // Km1 must be computationally independent from the authentication key
-
     (beta, v, keypair.public.to_bytes())
 }
 
@@ -116,7 +106,8 @@ pub fn registration_2(username: &str, envelope: &Vec<u8>) {
 pub fn authenticate_1(
     username: &str,
     alpha: &RistrettoPoint,
-) -> (RistrettoPoint, RistrettoPoint, Vec<u8>) {
+    ke_1: &RistrettoPoint,
+) -> (RistrettoPoint, RistrettoPoint, Vec<u8>, RistrettoPoint) {
     let user_record: UserRecord =
         USER_MAP.lock().unwrap().get(username).unwrap().clone();
 
@@ -127,10 +118,19 @@ pub fn authenticate_1(
     println!("-) vU {:?}:", user_record.v_u);
     println!("-) beta {:?}:", beta);
 
-    (beta, user_record.v_u, user_record.envelope.unwrap())
+    //  SIGMA
+    //  KE2 = g^y, Sig(PrivS; g^x, g^y), Mac(Km1; IdS)
+    let ke_2: RistrettoPoint = user_record.k_u * RISTRETTO_BASEPOINT_POINT;
+    let message = ke_1 + ke_2;
+    //    let sig = keypair.sign(message.to_bytes());
+
+    // Mac(Km1; IdS)
+    // Km1 must be computationally independent from the authentication key
+
+    (beta, user_record.v_u, user_record.envelope.unwrap(), ke_2)
 }
 
-pub fn authenticate_2(username: &str) {
+pub fn authenticate_2(username: &str, ke_3: &RistrettoPoint) {
     println!("=) Verified KE3 -- {} logged in.", username);
 }
 

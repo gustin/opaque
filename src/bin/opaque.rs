@@ -215,7 +215,7 @@ fn main() {
     // The simplified form with the base point factor dropped:
     // spec: alpha=(H'(x))^r in the first message and set the
     //      function output to H(x,v,beta^{1/r})
-    println!("*) alpha=(H'(x)^r");
+    println!("*) alpha=H'(x)^r");
     let r = Scalar::random(&mut cspring);
     let hash_prime =
         RistrettoPoint::hash_from_bytes::<Sha3_512>(pwd_u.as_bytes());
@@ -225,13 +225,7 @@ fn main() {
     println!("-) H' {:?}:", hash_prime);
     println!("-) alpha {:?}:", alpha);
 
-    // SIGMA-I
-    // KE1 = g^x - X25519(a, 9) where 9 is the u-coordinate of the base
-    // point and is encoded as a byte with value 9, followed by 31 zero bytes.
-    let x = Scalar::random(&mut cspring);
-    let ke_1 = x * RISTRETTO_BASEPOINT_POINT;
-
-    let (beta, v, pub_s) = registration_1(username, &alpha, &ke_1);
+    let (beta, v, pub_s) = registration_1(username, &alpha);
     println!("-) beta: {:?} ", beta);
     println!("-) v: {:?} ", v);
     println!("-) PubS {:?}:", pub_s);
@@ -316,7 +310,7 @@ fn main() {
     let nonce: GenericArray<u8, typenum::U12> =
         GenericArray::clone_from_slice(&output_key_material[32..44]);
 
-    let payload: Vec<u8> = serialize(&envelope).unwrap();
+    let payload: Vec<u8> = bincode::serialize(&envelope).unwrap();
     let env_cipher = aead.encrypt(&nonce, payload.as_slice()).unwrap();
 
     println!("-) encryption key 32-byte {:?}:", encryption_key);
@@ -335,7 +329,7 @@ fn main() {
 
     println!("~) ---------------------| Authenticating: -> usename: {} : password: {} <--------", username, pwd_u);
 
-    println!("*) alpha=(H'(x)^r");
+    println!("*) alpha=H'(x)^r");
     let r_a = Scalar::random(&mut cspring);
     let hash_prime_a =
         RistrettoPoint::hash_from_bytes::<Sha3_512>(pwd_u_a.as_bytes());
@@ -348,7 +342,13 @@ fn main() {
     // spec: alpha=(H'(x))^r in the first message and set the
     //      function output to H(x,v,beta^{1/r})
 
-    let (beta_a, v_a, envelope_a) = authenticate_1(username, &alpha_a);
+    // SIGMA-I
+    // KE1 = g^x - X25519(a, 9) where 9 is the u-coordinate of the base
+    // point and is encoded as a byte with value 9, followed by 31 zero bytes.
+    let x = Scalar::random(&mut cspring);
+    let ke_1 = RISTRETTO_BASEPOINT_POINT * x;
+
+    let (beta_a, v_a, envelope_a, ke_2) = authenticate_1(username, &alpha_a, &ke_1);
 
     println!("-) beta {:?}:", beta_a);
     println!("-) v {:?}:", v_a);
@@ -360,7 +360,7 @@ fn main() {
     println!("-) {{1/r}} {:?}:", inverse_r_a);
     println!("-) beta^{{1/r}} {:?}:", sub_beta_a);
 
-    println!("*) H(x, v, beta^{{1/r}})");
+    println!("*) RwdU = H(x, v, beta^{{1/r}})");
 
     let mut hasher_a = Sha3_512::new();
     hasher_a.input(pwd_u_a.as_bytes());
@@ -368,7 +368,7 @@ fn main() {
     hasher_a.input(sub_beta_a.compress().to_bytes());
     let rwd_u_a = hasher_a.result();
 
-    println!("-) Rwd U {:?}:", rwd_u_a);
+    println!("-) RwdU {:?}:", rwd_u_a);
 
     // Use rwd_u_a to decrypt envelope
 
@@ -395,7 +395,11 @@ fn main() {
 
     println!("=) EnvU (decoded) {:?}:",  envelope_for_realz);
 
-    authenticate_2(username);
+    //  KE3 = Sig(PrivU; g^y, g^x), Mac(Km2; IdU)
+    let ke_3 = ke_2;
+
+    authenticate_2(username, &ke_3);
+
     // run the specified KE protocol using their respective public and
     // private keys
 
