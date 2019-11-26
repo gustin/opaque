@@ -2,6 +2,7 @@ use opaque::*;
 
 use bincode::{deserialize, serialize};
 use rand_os::OsRng;
+use rand_chacha::ChaCha20Rng;
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::RistrettoPoint;
@@ -100,6 +101,7 @@ fn OPRF(alpha: &RistrettoPoint, g: &RistrettoPoint) -> RistrettoPoint {
     // S: upon receiving a value alpha, respond with v=g^k and
     // beta=alpha^k
     let mut cspring = OsRng::new().unwrap();
+    /* Note: Think about feeding this to HDKF after generating with ChaCha */
     let k = Scalar::random(&mut cspring);
     let v = g * k;
     let beta = alpha * k;
@@ -297,12 +299,13 @@ fn main() {
     // see section on to "salt or not to salt", currently not salting
     let hkdf = Hkdf::<Sha512>::new(None, &rwd_u);
     let mut output_key_material = [0u8; 44]; // 32 byte key + 96 bit nonce
-    let info = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap();
+    let info = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap(); // NOTE: check info value
     hkdf.expand(&info, &mut output_key_material).unwrap();
 
     println!("-) Hkdf Okm is {}", hex::encode(&output_key_material[..]));
 
     // AES-GCM-SIV
+    // Note: other option: ChaCha20-Poly1305 AEAD
 
     let encryption_key: GenericArray<u8, typenum::U32> =
         GenericArray::clone_from_slice(&output_key_material[0..32]);
@@ -343,11 +346,19 @@ fn main() {
     //      function output to H(x,v,beta^{1/r})
 
     // SIGMA-I
-    // KE1 = g^x - X25519(a, 9) where 9 is the u-coordinate of the base
-    // point and is encoded as a byte with value 9, followed by 31 zero bytes.
+    // sidA, g^x, nA, infoA
+    // sidA: session identifier chosen by each party for the ongoing session, is returned by B
+    // g^x: basepoint times random scalar x
+    // nA: nonce, fresh and anew with each session
+    // info: any additional info to be carried in the protocol, not required (could be protocol
+    // name, version, message number, etc)
+
     let x = Scalar::random(&mut cspring);
     let ke_1 = RISTRETTO_BASEPOINT_POINT * x;
+    let nA = "";
+    let sidA = 1;
 
+    println!("-) KE_1: {:?}", ke_1);
     let (beta_a, v_a, envelope_a, ke_2) = authenticate_1(username, &alpha_a, &ke_1);
 
     println!("-) beta {:?}:", beta_a);
@@ -363,7 +374,7 @@ fn main() {
     println!("*) RwdU = H(x, v, beta^{{1/r}})");
 
     let mut hasher_a = Sha3_512::new();
-    hasher_a.input(pwd_u_a.as_bytes());
+    hasher_a.input(pwd_u_a.as_bytes());    // NOTE: Harden with a key derivitive, Section 3.4
     hasher_a.input(v_a.compress().to_bytes());
     hasher_a.input(sub_beta_a.compress().to_bytes());
     let rwd_u_a = hasher_a.result();
@@ -374,7 +385,7 @@ fn main() {
 
     let hkdf_a = Hkdf::<Sha512>::new(None, &rwd_u_a);
     let mut okm_a = [0u8; 44]; // 32 byte key + 96 bit nonce
-    let info_a = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap();
+    let info_a = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap(); // make info the domain string, +
     hkdf_a.expand(&info_a, &mut okm_a).unwrap();
 
     println!("-) HKDF OKM {}", hex::encode(&okm_a[..]));
@@ -396,9 +407,15 @@ fn main() {
     println!("=) EnvU (decoded) {:?}:",  envelope_for_realz);
 
     //  KE3 = Sig(PrivU; g^y, g^x), Mac(Km2; IdU)
-    let ke_3 = ke_2;
 
-    authenticate_2(username, &ke_3);
+    // sidA
+    // sidB
+    // { infoA, A, sigA(nB, sidA, g^x, infoA, infoA), MAC kM(A)} Ke
+
+
+//    let ke_3 = ke_2;
+
+ //   authenticate_2(username, &ke_3);
 
     // run the specified KE protocol using their respective public and
     // private keys

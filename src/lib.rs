@@ -13,6 +13,13 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
+use hkdf::Hkdf;
+use hmac::{Mac, Hmac};
+use sha2::Sha512;
+use sha3::{Digest, Sha3_512};
+
+type HmacSha512 = Hmac<Sha512>;
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Envelope {
     pub priv_u: [u8; 32],
@@ -113,15 +120,55 @@ pub fn authenticate_1(
 
     // S to C: beta=alpha^kU, vU, EnvU, KE2
     println!("*) beta=alpha^kU, vU (g^k)");
-    let beta = alpha * user_record.k_u;
+    let beta = alpha * user_record.k_u; // DH-OPRF paper recommends rotating
     println!("-) kU {:?}:", user_record.k_u);
     println!("-) vU {:?}:", user_record.v_u);
     println!("-) beta {:?}:", beta);
 
     //  SIGMA
     //  KE2 = g^y, Sig(PrivS; g^x, g^y), Mac(Km1; IdS)
-    let ke_2: RistrettoPoint = user_record.k_u * RISTRETTO_BASEPOINT_POINT;
-    let message = ke_1 + ke_2;
+
+    // sidA:
+    // sidB
+    // g^y
+    // nB
+    // infoB
+
+    let ke_2: RistrettoPoint = RISTRETTO_BASEPOINT_POINT * user_record.k_u;
+    let dh: RistrettoPoint = user_record.k_u * ke_1;
+
+    let hkdf = Hkdf::<Sha512>::new(None, dh.compress().as_bytes());
+    let mut okm = [0u8; 108]; // 32 byte key, 96 bit nonce, 64 bytes
+    let info = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap();
+    hkdf.expand(&info, &mut okm).unwrap();
+
+    let mut cspring = OsRng::new().unwrap();
+    let keypair: Keypair = Keypair::generate(&mut cspring);
+    let public_key = keypair.public.to_bytes();
+
+    // MAC(Km; PubS)
+    let mut mac = HmacSha512::new_varkey(&okm[44..108]).unwrap();
+    mac.input(&public_key);
+
+    // SIG(B; g^x, g^y)
+    let mut prehashed: Sha3_512 = Sha3_512::new();
+    prehashed.input(ke_1.compress().as_bytes());
+    prehashed.input(ke_2.compress().as_bytes());
+    let context: &[u8] = b"SpecificCustomerDomainName";
+    let sig: Signature = keypair.sign_prehashed(prehashed, Some(context));
+
+    println!("-) KE_2: {:?}", ke_2);
+    println!("-) Shared Secret: {:?}", dh);
+    // Guard: HMAC crate:
+    // Be very careful using this method (code()), since incorrect use of the code
+    // value may permit timing attacks which defeat the security provided by the Mac
+    // trait.
+    println!("-) MAC(Km; PubS): {:?}", mac.result().code());
+    println!("-) SIG(PrivS; g^x, g^y): {:?}", sig.to_bytes());
+
+    // sidA, sidB, g^y, nB, info1B
+    // gy, {B, SigB(g^x, g^y), MAC(Km; B)} Ke
+    //let message = ke_1 + ke_2;
     //    let sig = keypair.sign(message.to_bytes());
 
     // Mac(Km1; IdS)
