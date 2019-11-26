@@ -9,6 +9,9 @@ use rand_os::OsRng;
 
 use ed25519_dalek::{Keypair, PublicKey, SecretKey, Signature};
 
+use aes_gcm_siv::aead::{generic_array::GenericArray, Aead, NewAead, Payload};
+use aes_gcm_siv::Aes256GcmSiv;
+
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -25,6 +28,14 @@ pub struct Envelope {
     pub priv_u: [u8; 32],
     pub pub_u: [u8; 32],
     pub pub_s: [u8; 32],
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct KeyExchange {
+    pub identity: [u8; 32],
+    pub signature: [u8; 64],
+    pub mac: [u8; 64],
+    // nonce, sid, info
 }
 
 #[derive(Clone)]
@@ -114,7 +125,7 @@ pub fn authenticate_1(
     username: &str,
     alpha: &RistrettoPoint,
     ke_1: &RistrettoPoint,
-) -> (RistrettoPoint, RistrettoPoint, Vec<u8>, RistrettoPoint) {
+) -> (RistrettoPoint, RistrettoPoint, Vec<u8>, Vec<u8>) {
     let user_record: UserRecord =
         USER_MAP.lock().unwrap().get(username).unwrap().clone();
 
@@ -164,7 +175,22 @@ pub fn authenticate_1(
     // value may permit timing attacks which defeat the security provided by the Mac
     // trait.
     println!("-) MAC(Km; PubS): {:?}", mac.result().code());
-    println!("-) SIG(PrivS; g^x, g^y): {:?}", sig.to_bytes());
+    println!("-) SIG(PrivS; g^x, g^y): {:?}", sig);
+
+    let key_exchange = KeyExchange {
+        identity: public.to_bytes(),
+        signature: sig.to_bytes(),
+        mac: mac.result().code(),
+    };
+
+    let encryption_key: GenericArray<u8, typenum::U32> =
+        GenericArray::clone_from_slice(&okm[0..32]);
+    let aead = Aes256GcmSiv::new(encryption_key);
+    let nonce: GenericArray<u8, typenum::U12> =
+        GenericArray::clone_from_slice(&okm[32..44]);
+
+    let payload: Vec<u8> = bincode::serialize(&key_exchange).unwrap();
+    let ke_2 = aead.encrypt(&nonce, payload.as_slice()).unwrap();
 
     // sidA, sidB, g^y, nB, info1B
     // gy, {B, SigB(g^x, g^y), MAC(Km; B)} Ke
