@@ -17,7 +17,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use hkdf::Hkdf;
-use hmac::{Mac, Hmac};
+use hmac::{Hmac, Mac};
 use sha2::Sha512;
 use sha3::{Digest, Sha3_512};
 
@@ -33,9 +33,9 @@ pub struct Envelope {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct KeyExchange<'a> {
     pub identity: [u8; 32],
-    #[serde(with="serde_bytes")]
+    #[serde(with = "serde_bytes")]
     pub signature: &'a [u8],
-    #[serde(with="serde_bytes")]
+    #[serde(with = "serde_bytes")]
     pub mac: Vec<u8>,
     // nonce, sid, info
 }
@@ -127,7 +127,13 @@ pub fn authenticate_1(
     username: &str,
     alpha: &RistrettoPoint,
     ke_1: &RistrettoPoint,
-) -> (RistrettoPoint, RistrettoPoint, Vec<u8>, Vec<u8>) {
+) -> (
+    RistrettoPoint,
+    RistrettoPoint,
+    Vec<u8>,
+    Vec<u8>,
+    RistrettoPoint,
+) {
     let user_record: UserRecord =
         USER_MAP.lock().unwrap().get(username).unwrap().clone();
 
@@ -178,7 +184,7 @@ pub fn authenticate_1(
     // Be very careful using this method (code()), since incorrect use of the code
     // value may permit timing attacks which defeat the security provided by the Mac
     // trait.
-//    println!("-) MAC(Km; PubS): {:?}", mac.result().code());
+    //    println!("-) MAC(Km; PubS): {:?}", mac.result().code());
     println!("-) SIG(PrivS; g^x, g^y): {:?}", sig);
 
     let key_exchange = KeyExchange {
@@ -194,7 +200,10 @@ pub fn authenticate_1(
         GenericArray::clone_from_slice(&okm[32..44]);
 
     let payload: Vec<u8> = bincode::serialize(&key_exchange).unwrap();
-    let ke_2 = aead.encrypt(&nonce, payload.as_slice()).unwrap();
+    let encrypted_ke_2 = aead.encrypt(&nonce, payload.as_slice()).unwrap();
+
+    println!("-) DH encryption key 32-byte {:?}:", encryption_key);
+    println!("-) DH nonce 96 bit {:?}:", nonce);
 
     // sidA, sidB, g^y, nB, info1B
     // gy, {B, SigB(g^x, g^y), MAC(Km; B)} Ke
@@ -204,7 +213,13 @@ pub fn authenticate_1(
     // Mac(Km1; IdS)
     // Km1 must be computationally independent from the authentication key
 
-    (beta, user_record.v_u, user_record.envelope.unwrap(), ke_2)
+    (
+        beta,
+        user_record.v_u,
+        user_record.envelope.unwrap(),
+        encrypted_ke_2,
+        ke_2,
+    )
 }
 
 pub fn authenticate_2(username: &str, ke_3: &RistrettoPoint) {

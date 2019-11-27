@@ -1,8 +1,8 @@
 use opaque::*;
 
 use bincode::{deserialize, serialize};
-use rand_os::OsRng;
 use rand_chacha::ChaCha20Rng;
+use rand_os::OsRng;
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::RistrettoPoint;
@@ -360,7 +360,34 @@ fn main() {
     let sidA = 1;
 
     println!("-) KE_1: {:?}", ke_1);
-    let (beta_a, v_a, envelope_a, ke_2) = authenticate_1(username, &alpha_a, &ke_1);
+    let (beta_a, v_a, envelope_a, ke_2, y) =
+        authenticate_1(username, &alpha_a, &ke_1);
+
+    // decrypt ke_2, need to pass g^y along to do so
+    let dh: RistrettoPoint = x * y;
+    println!("-) Shared Secret: {:?}", dh);
+
+    let hkdf = Hkdf::<Sha512>::new(None, dh.compress().as_bytes());
+    let mut okm_dh = [0u8; 108]; // 32 byte key, 96 bit nonce, 64 bytes
+    let info = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap();
+    hkdf.expand(&info, &mut okm_dh).unwrap();
+
+    let encryption_key_dh: GenericArray<u8, typenum::U32> =
+        GenericArray::clone_from_slice(&okm_dh[0..32]);
+    let aead_dh = Aes256GcmSiv::new(encryption_key_dh);
+    let nonce_dh: GenericArray<u8, typenum::U12> =
+        GenericArray::clone_from_slice(&okm_dh[32..44]);
+
+    println!("-) DH encryption key 32-byte {:?}:", encryption_key_dh);
+    println!("-) DH nonce 96 bit {:?}:", nonce_dh);
+
+    let key_2_decrypted = aead_dh
+        .decrypt(&nonce_dh, ke_2.as_slice())
+        .expect("decryption failure");
+    let key_2_for_realz: KeyExchange =
+        bincode::deserialize(key_2_decrypted.as_slice()).unwrap();
+
+    // OPRF
 
     println!("-) beta {:?}:", beta_a);
     println!("-) v {:?}:", v_a);
@@ -375,7 +402,7 @@ fn main() {
     println!("*) RwdU = H(x, v, beta^{{1/r}})");
 
     let mut hasher_a = Sha3_512::new();
-    hasher_a.input(pwd_u_a.as_bytes());    // NOTE: Harden with a key derivitive, Section 3.4
+    hasher_a.input(pwd_u_a.as_bytes()); // NOTE: Harden with a key derivitive, Section 3.4
     hasher_a.input(v_a.compress().to_bytes());
     hasher_a.input(sub_beta_a.compress().to_bytes());
     let rwd_u_a = hasher_a.result();
@@ -400,12 +427,13 @@ fn main() {
     println!("-) encryption key 32-byte {:?}:", encryption_key_a);
     println!("-) nonce 96 bit {:?}:", nonce_a);
 
-    let envelope_decrypted =
-        aead.decrypt(&nonce, envelope_a.as_slice()).expect("decryption failure");
+    let envelope_decrypted = aead
+        .decrypt(&nonce, envelope_a.as_slice())
+        .expect("decryption failure");
     let envelope_for_realz: Envelope =
         bincode::deserialize(envelope_decrypted.as_slice()).unwrap();
 
-    println!("=) EnvU (decoded) {:?}:",  envelope_for_realz);
+    println!("=) EnvU (decoded) {:?}:", envelope_for_realz);
 
     //  KE3 = Sig(PrivU; g^y, g^x), Mac(Km2; IdU)
 
@@ -413,10 +441,9 @@ fn main() {
     // sidB
     // { infoA, A, sigA(nB, sidA, g^x, infoA, infoA), MAC kM(A)} Ke
 
+    //    let ke_3 = ke_2;
 
-//    let ke_3 = ke_2;
-
- //   authenticate_2(username, &ke_3);
+    //   authenticate_2(username, &ke_3);
 
     // run the specified KE protocol using their respective public and
     // private keys
