@@ -353,6 +353,7 @@ fn main() {
     // info: any additional info to be carried in the protocol, not required (could be protocol
     // name, version, message number, etc)
 
+    // Guard: consider using x25519_dalek ephemeral keys, though no signing
     let x = Scalar::random(&mut cspring);
     let ke_1 = RISTRETTO_BASEPOINT_POINT * x;
     let nA = "";

@@ -156,6 +156,8 @@ pub fn authenticate_1(
     hkdf.expand(&info, &mut okm).unwrap();
 
     let mut cspring = OsRng::new().unwrap();
+    // Guard: Using ed25519 keys here for signing, x25519
+    // may (or should be) more efficient for DH
     let keypair: Keypair = Keypair::generate(&mut cspring);
     let public_key = keypair.public.to_bytes();
 
