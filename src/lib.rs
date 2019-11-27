@@ -31,10 +31,12 @@ pub struct Envelope {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct KeyExchange {
+pub struct KeyExchange<'a> {
     pub identity: [u8; 32],
-    pub signature: [u8; 64],
-    pub mac: [u8; 64],
+    #[serde(with="serde_bytes")]
+    pub signature: &'a [u8],
+    #[serde(with="serde_bytes")]
+    pub mac: Vec<u8>,
     // nonce, sid, info
 }
 
@@ -174,13 +176,13 @@ pub fn authenticate_1(
     // Be very careful using this method (code()), since incorrect use of the code
     // value may permit timing attacks which defeat the security provided by the Mac
     // trait.
-    println!("-) MAC(Km; PubS): {:?}", mac.result().code());
+//    println!("-) MAC(Km; PubS): {:?}", mac.result().code());
     println!("-) SIG(PrivS; g^x, g^y): {:?}", sig);
 
     let key_exchange = KeyExchange {
-        identity: public.to_bytes(),
-        signature: sig.to_bytes(),
-        mac: mac.result().code(),
+        identity: public_key,
+        signature: &sig.to_bytes(),
+        mac: mac.result().code().as_slice().to_vec(),
     };
 
     let encryption_key: GenericArray<u8, typenum::U32> =
