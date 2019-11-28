@@ -24,6 +24,7 @@ use aes_gcm_siv::Aes256GcmSiv;
 // of high performance AES-NI and CLMUL CPU intrinsics
 
 use hkdf::Hkdf;
+use hmac::{Hmac, Mac};
 use sha2::Sha512;
 use sha3::{Digest, Sha3_512};
 
@@ -323,7 +324,7 @@ fn main() {
     // Section 3.1.1 Implementing the EnvU envelop
 
     // U sends EnvU and PubU to S and erases PwdU, RwdU and all keys.
-    registration_2(username, &env_cipher);
+    registration_2(username, pub_u, &env_cipher);
 
     // C to S: Uid, alpha=H'(PwdU)*g^r, KE1
 
@@ -362,30 +363,6 @@ fn main() {
     println!("-) KE_1: {:?}", ke_1);
     let (beta_a, v_a, envelope_a, ke_2, y) =
         authenticate_1(username, &alpha_a, &ke_1);
-
-    // decrypt ke_2, need to pass g^y along to do so
-    let dh: RistrettoPoint = x * y;
-    println!("-) Shared Secret: {:?}", dh);
-
-    let hkdf = Hkdf::<Sha512>::new(None, dh.compress().as_bytes());
-    let mut okm_dh = [0u8; 108]; // 32 byte key, 96 bit nonce, 64 bytes
-    let info = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap();
-    hkdf.expand(&info, &mut okm_dh).unwrap();
-
-    let encryption_key_dh: GenericArray<u8, typenum::U32> =
-        GenericArray::clone_from_slice(&okm_dh[0..32]);
-    let aead_dh = Aes256GcmSiv::new(encryption_key_dh);
-    let nonce_dh: GenericArray<u8, typenum::U12> =
-        GenericArray::clone_from_slice(&okm_dh[32..44]);
-
-    println!("-) DH encryption key 32-byte {:?}:", encryption_key_dh);
-    println!("-) DH nonce 96 bit {:?}:", nonce_dh);
-
-    let key_2_decrypted = aead_dh
-        .decrypt(&nonce_dh, ke_2.as_slice())
-        .expect("decryption failure");
-    let key_2_for_realz: KeyExchange =
-        bincode::deserialize(key_2_decrypted.as_slice()).unwrap();
 
     // OPRF
 
@@ -435,7 +412,56 @@ fn main() {
 
     println!("=) EnvU (decoded) {:?}:", envelope_for_realz);
 
+    // SIGMA
+
     //  KE3 = Sig(PrivU; g^y, g^x), Mac(Km2; IdU)
+    // { A, SIGa(g^y, g^x), MAC(Km; A) } Ke
+
+    // decrypt ke_2
+    let dh: RistrettoPoint = x * y;
+    println!("-) Shared Secret: {:?}", dh);
+
+    let hkdf = Hkdf::<Sha512>::new(None, dh.compress().as_bytes());
+    let mut okm_dh = [0u8; 108]; // 32 byte key, 96 bit nonce, 64 bytes
+    let info = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap();
+    hkdf.expand(&info, &mut okm_dh).unwrap();
+
+    let encryption_key_dh: GenericArray<u8, typenum::U32> =
+        GenericArray::clone_from_slice(&okm_dh[0..32]);
+    let aead_dh = Aes256GcmSiv::new(encryption_key_dh);
+    let nonce_dh: GenericArray<u8, typenum::U12> =
+        GenericArray::clone_from_slice(&okm_dh[32..44]);
+
+    println!("-) DH encryption key 32-byte {:?}:", encryption_key_dh);
+    println!("-) DH nonce 96 bit {:?}:", nonce_dh);
+    // Guard: verify HMAC on B
+
+    let key_2_decrypted = aead_dh
+        .decrypt(&nonce_dh, ke_2.as_slice())
+        .expect("decryption failure");
+    let key_2_for_realz: KeyExchange =
+        bincode::deserialize(key_2_decrypted.as_slice()).unwrap();
+
+    // SIGa(g^y, g^x)
+    let mut prehashed: Sha3_512 = Sha3_512::new();
+    prehashed.input(y.compress().as_bytes());
+    prehashed.input(ke_1.compress().as_bytes());
+    let context: &[u8] = b"SpecificCustomerDomainName";
+    let sig: Signature = keypair.sign_prehashed(prehashed, Some(context));
+
+    // MAC(Km; PubS)
+    let mut mac = HmacSha512::new_varkey(&okm_dh[44..108]).unwrap();
+    mac.input(&pub_u);
+
+    let key_exchange_3 = KeyExchange {
+        identity: pub_u,
+        signature: &sig.to_bytes(),
+        mac: mac.result().code().as_slice().to_vec(),
+    };
+
+    let payload_dh: Vec<u8> = bincode::serialize(&key_exchange_3).unwrap();
+    let encrypted_ke_3 =
+        aead_dh.encrypt(&nonce_dh, payload_dh.as_slice()).unwrap();
 
     // sidA
     // sidB
@@ -443,7 +469,7 @@ fn main() {
 
     //    let ke_3 = ke_2;
 
-    //   authenticate_2(username, &ke_3);
+    authenticate_2(username, &encrypted_ke_3, &ke_1);
 
     // run the specified KE protocol using their respective public and
     // private keys

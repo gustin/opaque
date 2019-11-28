@@ -18,10 +18,10 @@ use std::sync::Mutex;
 
 use hkdf::Hkdf;
 use hmac::{Hmac, Mac};
-use sha2::Sha512;
+use sha2::Sha512; // NOTE: Drop sha2/sha3 to Blake for performance
 use sha3::{Digest, Sha3_512};
 
-type HmacSha512 = Hmac<Sha512>;
+pub type HmacSha512 = Hmac<Sha512>;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Envelope {
@@ -43,6 +43,7 @@ pub struct KeyExchange<'a> {
 #[derive(Clone)]
 struct UserRecord {
     envelope: Option<Vec<u8>>,
+    pub_u: Option<[u8; 32]>,
     k_u: Scalar,
     v_u: RistrettoPoint,
 }
@@ -98,6 +99,7 @@ pub fn registration_1(
     let beta = alpha * k;
     let user_record = UserRecord {
         envelope: None,
+        pub_u: None,
         k_u: k,
         v_u: v,
     };
@@ -112,10 +114,11 @@ pub fn registration_1(
     (beta, v, keypair.public.to_bytes())
 }
 
-pub fn registration_2(username: &str, envelope: &Vec<u8>) {
+pub fn registration_2(username: &str, pub_u: [u8; 32], envelope: &Vec<u8>) {
     let mut user_record: UserRecord =
         USER_MAP.lock().unwrap().get(username).unwrap().clone();
     user_record.envelope = Some(envelope.to_vec());
+    user_record.pub_u = Some(pub_u);
     USER_MAP
         .lock()
         .unwrap()
@@ -222,8 +225,49 @@ pub fn authenticate_1(
     )
 }
 
-pub fn authenticate_2(username: &str, ke_3: &RistrettoPoint) {
-    println!("=) Verified KE3 -- {} logged in.", username);
+pub fn authenticate_2(username: &str, ke_3: &Vec<u8>, x: &RistrettoPoint) {
+    let user_record: UserRecord =
+        USER_MAP.lock().unwrap().get(username).unwrap().clone();
+
+    let ke_2: RistrettoPoint = RISTRETTO_BASEPOINT_POINT * user_record.k_u;
+    let dh: RistrettoPoint = user_record.k_u * x;
+
+    let hkdf = Hkdf::<Sha512>::new(None, dh.compress().as_bytes());
+    let mut okm_dh = [0u8; 108]; // 32 byte key, 96 bit nonce, 64 bytes
+    let info = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap();
+    hkdf.expand(&info, &mut okm_dh).unwrap();
+
+    let encryption_key_dh: GenericArray<u8, typenum::U32> =
+        GenericArray::clone_from_slice(&okm_dh[0..32]);
+    let aead_dh = Aes256GcmSiv::new(encryption_key_dh);
+    let nonce_dh: GenericArray<u8, typenum::U12> =
+        GenericArray::clone_from_slice(&okm_dh[32..44]);
+
+    let key_3_decrypted = aead_dh
+        .decrypt(&nonce_dh, ke_3.as_slice())
+        .expect("decryption failure");
+    let key_3_for_realz: KeyExchange =
+        bincode::deserialize(key_3_decrypted.as_slice()).unwrap();
+
+    let pub_u = PublicKey::from_bytes(&user_record.pub_u.unwrap()).unwrap();
+
+    let mut prehashed: Sha3_512 = Sha3_512::new();
+    prehashed.input(ke_2.compress().as_bytes());
+    prehashed.input(x.compress().as_bytes());
+    let context: &[u8] = b"SpecificCustomerDomainName";
+    let signature: Signature =
+        Signature::from_bytes(&key_3_for_realz.signature).unwrap();
+    let verified = pub_u.verify_prehashed::<Sha3_512>(
+        prehashed,
+        Some(context),
+        &signature,
+    );
+
+    // check Mac on A
+
+    println!("=) {:?}", verified.unwrap());
+
+    println!("=) Signature Verified KE3 -- {} logged in.", username);
 }
 
 #[cfg(test)]
