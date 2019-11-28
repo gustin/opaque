@@ -1,4 +1,5 @@
 use opaque::*;
+use opaque::sigma::KeyExchange;
 
 use bincode::{deserialize, serialize};
 use rand_chacha::ChaCha20Rng;

@@ -1,3 +1,7 @@
+pub mod sigma;
+
+use crate::sigma::KeyExchange;
+
 use bincode::{deserialize, serialize};
 use serde::{Deserialize, Serialize};
 
@@ -28,16 +32,6 @@ pub struct Envelope {
     pub priv_u: [u8; 32],
     pub pub_u: [u8; 32],
     pub pub_s: [u8; 32],
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct KeyExchange<'a> {
-    pub identity: [u8; 32],
-    #[serde(with = "serde_bytes")]
-    pub signature: &'a [u8],
-    #[serde(with = "serde_bytes")]
-    pub mac: Vec<u8>,
-    // nonce, sid, info
 }
 
 #[derive(Clone)]
