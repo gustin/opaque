@@ -14,7 +14,7 @@ pub struct KeyExchange<'a> {
 }
 
 
-impl KeyExchange {
+impl KeyExchange<'_> {
 
     fn new() {
 
