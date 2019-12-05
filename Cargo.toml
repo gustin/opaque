@@ -4,6 +4,9 @@ version = "0.0.1"
 authors = ["gustin <gustin@mycelium.dev>"]
 edition = "2018"
 
+[features]
+nightly = ["curve25519-dalek/nightly"]
+
 [dependencies]
 aes-gcm-siv = "0.2.1"
 bincode = "1.2.0"

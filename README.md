@@ -30,3 +30,12 @@ Zero out memory with: https://lib.rs/crates/zeroize
 
 Use Ring for CSPRING: https://docs.rs/ring/0.16.9/ring/rand/index.html
 
+
+## WASM
+
+    rustup target add wasm32-unknown-unknown
+
+    cargo check --target wasm32-unknown-unknown
+
+    cargo build --target wasm32-unknown-unknown
+

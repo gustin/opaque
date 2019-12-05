@@ -307,7 +307,6 @@ fn main() {
     println!("-) Hkdf Okm is {}", hex::encode(&output_key_material[..]));
 
     // AES-GCM-SIV
-    // Note: other option: ChaCha20-Poly1305 AEAD
 
     let encryption_key: GenericArray<u8, typenum::U32> =
         GenericArray::clone_from_slice(&output_key_material[0..32]);
