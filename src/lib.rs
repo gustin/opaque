@@ -6,7 +6,7 @@ use bincode::{deserialize, serialize};
 use serde::{Deserialize, Serialize};
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
-use curve25519_dalek::ristretto::RistrettoPoint;
+use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
 use rand_core::RngCore;
 use rand_os::OsRng;
@@ -49,8 +49,12 @@ lazy_static! {
 
 pub fn registration_1(
     username: &str,
-    alpha: &RistrettoPoint,
+    alpha: &[u8; 32],
 ) -> (RistrettoPoint, RistrettoPoint, [u8; 32]) {
+
+    let alpha_point = CompressedRistretto::from_slice(&alpha[..]);
+    let alpha = alpha_point.decompress().unwrap();
+
     // Guard: Ensure alpha is in the Ristretto group
 
     // S chooses OPRF key kU (random and independent for each user U) and

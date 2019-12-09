@@ -229,6 +229,8 @@ fn main() {
     println!("-) H' {:?}:", hash_prime);
     println!("-) alpha {:?}:", alpha);
 
+    let alpha = alpha.compress().to_bytes();
+
     let (beta, v, pub_s) = registration_1(username, &alpha);
     println!("-) beta: {:?} ", beta);
     println!("-) v: {:?} ", v);
