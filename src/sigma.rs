@@ -1,4 +1,3 @@
-
 use serde::{Deserialize, Serialize};
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
@@ -13,12 +12,6 @@ pub struct KeyExchange<'a> {
     // nonce, sid, info
 }
 
-
 impl KeyExchange<'_> {
-
-    fn new() {
-
-
-    }
-
+    fn new() {}
 }

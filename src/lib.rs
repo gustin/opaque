@@ -50,8 +50,7 @@ lazy_static! {
 pub fn registration_1(
     username: &str,
     alpha: &[u8; 32],
-) -> (RistrettoPoint, RistrettoPoint, [u8; 32]) {
-
+) -> ([u8; 32], [u8; 32], [u8; 32]) {
     let alpha_point = CompressedRistretto::from_slice(&alpha[..]);
     let alpha = alpha_point.decompress().unwrap();
 
@@ -109,7 +108,11 @@ pub fn registration_1(
         .unwrap()
         .insert(username.to_string(), user_record);
 
-    (beta, v, keypair.public.to_bytes())
+    (
+        beta.compress().to_bytes(),
+        v.compress().to_bytes(),
+        keypair.public.to_bytes(),
+    )
 }
 
 pub fn registration_2(username: &str, pub_u: [u8; 32], envelope: &Vec<u8>) {

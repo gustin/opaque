@@ -1,12 +1,12 @@
-use opaque::*;
 use opaque::sigma::KeyExchange;
+use opaque::*;
 
 use bincode::{deserialize, serialize};
 use rand_chacha::ChaCha20Rng;
 use rand_os::OsRng;
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
-use curve25519_dalek::ristretto::RistrettoPoint;
+use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
 
 use aes_gcm_siv::aead::{generic_array::GenericArray, Aead, NewAead, Payload};
@@ -232,6 +232,13 @@ fn main() {
     let alpha = alpha.compress().to_bytes();
 
     let (beta, v, pub_s) = registration_1(username, &alpha);
+    // from u8, 32 to Ristretto Points
+    let beta_point = CompressedRistretto::from_slice(&beta[..]);
+    let beta = beta_point.decompress().unwrap();
+
+    let v_point = CompressedRistretto::from_slice(&v[..]);
+    let v = v_point.decompress().unwrap();
+
     println!("-) beta: {:?} ", beta);
     println!("-) v: {:?} ", v);
     println!("-) PubS {:?}:", pub_s);
