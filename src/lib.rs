@@ -115,11 +115,11 @@ pub fn registration_start(
     )
 }
 
-pub fn registration_finalize(username: &str, pub_u: [u8; 32], envelope: &Vec<u8>) {
+pub fn registration_finalize(username: &str, pub_u: &[u8; 32], envelope: &Vec<u8>) {
     let mut user_record: UserRecord =
         USER_MAP.lock().unwrap().get(username).unwrap().clone();
     user_record.envelope = Some(envelope.to_vec());
-    user_record.pub_u = Some(pub_u);
+    user_record.pub_u = Some(*pub_u);
     USER_MAP
         .lock()
         .unwrap()

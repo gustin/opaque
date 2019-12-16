@@ -333,7 +333,7 @@ fn main() {
     // Section 3.1.1 Implementing the EnvU envelop
 
     // U sends EnvU and PubU to S and erases PwdU, RwdU and all keys.
-    registration_finalize(username, pub_u, &env_cipher);
+    registration_finalize(username, &pub_u, &env_cipher);
 
     // C to S: Uid, alpha=H'(PwdU)*g^r, KE1
 
