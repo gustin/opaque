@@ -47,7 +47,7 @@ lazy_static! {
         { Mutex::new(HashMap::new()) };
 }
 
-pub fn registration_1(
+pub fn registration_start(
     username: &str,
     alpha: &[u8; 32],
 ) -> ([u8; 32], [u8; 32], [u8; 32]) {
@@ -115,7 +115,7 @@ pub fn registration_1(
     )
 }
 
-pub fn registration_2(username: &str, pub_u: [u8; 32], envelope: &Vec<u8>) {
+pub fn registration_finalize(username: &str, pub_u: [u8; 32], envelope: &Vec<u8>) {
     let mut user_record: UserRecord =
         USER_MAP.lock().unwrap().get(username).unwrap().clone();
     user_record.envelope = Some(envelope.to_vec());

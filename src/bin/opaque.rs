@@ -231,7 +231,7 @@ fn main() {
 
     let alpha = alpha.compress().to_bytes();
 
-    let (beta, v, pub_s) = registration_1(username, &alpha);
+    let (beta, v, pub_s) = registration_start(username, &alpha);
     // from u8, 32 to Ristretto Points
     let beta_point = CompressedRistretto::from_slice(&beta[..]);
     let beta = beta_point.decompress().unwrap();
@@ -333,7 +333,7 @@ fn main() {
     // Section 3.1.1 Implementing the EnvU envelop
 
     // U sends EnvU and PubU to S and erases PwdU, RwdU and all keys.
-    registration_2(username, pub_u, &env_cipher);
+    registration_finalize(username, pub_u, &env_cipher);
 
     // C to S: Uid, alpha=H'(PwdU)*g^r, KE1
 
