@@ -136,15 +136,15 @@ pub fn registration_finalize(
 
 pub fn authenticate_start(
     username: &str,
-    alpha: &RistrettoPoint,
-    ke_1: &RistrettoPoint,
-) -> (
-    RistrettoPoint,
-    RistrettoPoint,
-    Vec<u8>,
-    Vec<u8>,
-    RistrettoPoint,
-) {
+    alpha: &[u8; 32],
+    ke_1: &[u8; 32],
+) -> ([u8; 32], [u8; 32], Vec<u8>, Vec<u8>, [u8; 32]) {
+    let alpha_point = CompressedRistretto::from_slice(&alpha[..]);
+    let alpha = alpha_point.decompress().unwrap();
+
+    let ke_1_point = CompressedRistretto::from_slice(&ke_1[..]);
+    let ke_1 = ke_1_point.decompress().unwrap();
+
     let user_record: UserRecord =
         USER_MAP.lock().unwrap().get(username).unwrap().clone();
 
@@ -225,14 +225,15 @@ pub fn authenticate_start(
     // Km1 must be computationally independent from the authentication key
 
     (
-        beta,
-        user_record.v_u,
+        beta.compress().to_bytes(),
+        user_record.v_u.compress().to_bytes(),
         user_record.envelope.unwrap(),
         encrypted_ke_2,
-        ke_2,
+        ke_2.compress().to_bytes(),
     )
 }
 
+// NOTE: Think about gaming this function independent of authenticate_start
 pub fn authenticate_finalize(
     username: &str,
     ke_3: &Vec<u8>,

@@ -370,8 +370,20 @@ fn main() {
     let sidA = 1;
 
     println!("-) KE_1: {:?}", ke_1);
-    let (beta_a, v_a, envelope_a, ke_2, y) =
-        authenticate_start(username, &alpha_a, &ke_1);
+    let (beta_a, v_a, envelope_a, ke_2, y) = authenticate_start(
+        username,
+        &alpha_a.compress().as_bytes(),
+        &ke_1.compress().as_bytes(),
+    );
+
+    let beta_point = CompressedRistretto::from_slice(&beta_a[..]);
+    let beta_a = beta_point.decompress().unwrap();
+
+    let v_point = CompressedRistretto::from_slice(&v_a[..]);
+    let v_a = v_point.decompress().unwrap();
+
+    let y_point = CompressedRistretto::from_slice(&y[..]);
+    let y = y_point.decompress().unwrap();
 
     // OPRF
 
