@@ -371,7 +371,7 @@ fn main() {
 
     println!("-) KE_1: {:?}", ke_1);
     let (beta_a, v_a, envelope_a, ke_2, y) =
-        authenticate_1(username, &alpha_a, &ke_1);
+        authenticate_start(username, &alpha_a, &ke_1);
 
     // OPRF
 
@@ -478,7 +478,7 @@ fn main() {
 
     //    let ke_3 = ke_2;
 
-    authenticate_2(username, &encrypted_ke_3, &ke_1);
+    authenticate_finalize(username, &encrypted_ke_3, &ke_1);
 
     // run the specified KE protocol using their respective public and
     // private keys

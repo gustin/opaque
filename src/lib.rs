@@ -115,10 +115,17 @@ pub fn registration_start(
     )
 }
 
-pub fn registration_finalize(username: &str, pub_u: &[u8; 32], envelope: &Vec<u8>) {
-    let mut user_record: UserRecord =
+pub fn registration_finalize(
+    username: &str,
+    pub_u: &[u8; 32],
+    envelope: &Vec<u8>,
+) {
+    println!("Extracting Username");
+    let mut user_record =
         USER_MAP.lock().unwrap().get(username).unwrap().clone();
+    println!("...extracted");
     user_record.envelope = Some(envelope.to_vec());
+    println!("Obtained envelope");
     user_record.pub_u = Some(*pub_u);
     USER_MAP
         .lock()
@@ -127,7 +134,7 @@ pub fn registration_finalize(username: &str, pub_u: &[u8; 32], envelope: &Vec<u8
     println!("=) Registered {:?} with envelope {:?}:", username, envelope);
 }
 
-pub fn authenticate_1(
+pub fn authenticate_start(
     username: &str,
     alpha: &RistrettoPoint,
     ke_1: &RistrettoPoint,
@@ -226,7 +233,11 @@ pub fn authenticate_1(
     )
 }
 
-pub fn authenticate_2(username: &str, ke_3: &Vec<u8>, x: &RistrettoPoint) {
+pub fn authenticate_finalize(
+    username: &str,
+    ke_3: &Vec<u8>,
+    x: &RistrettoPoint,
+) {
     let user_record: UserRecord =
         USER_MAP.lock().unwrap().get(username).unwrap().clone();
 
