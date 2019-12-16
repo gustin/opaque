@@ -139,6 +139,7 @@ pub fn authenticate_start(
     alpha: &[u8; 32],
     ke_1: &[u8; 32],
 ) -> ([u8; 32], [u8; 32], Vec<u8>, Vec<u8>, [u8; 32]) {
+    println!("====> Rusty Authentication Start");
     let alpha_point = CompressedRistretto::from_slice(&alpha[..]);
     let alpha = alpha_point.decompress().unwrap();
 
@@ -153,6 +154,7 @@ pub fn authenticate_start(
     let beta = alpha * user_record.k_u; // DH-OPRF paper recommends rotating
     println!("-) kU {:?}:", user_record.k_u);
     println!("-) vU {:?}:", user_record.v_u);
+    println!("-> Envelope {:?}:", user_record.envelope);
     println!("-) beta {:?}:", beta);
 
     //  SIGMA
@@ -237,8 +239,11 @@ pub fn authenticate_start(
 pub fn authenticate_finalize(
     username: &str,
     ke_3: &Vec<u8>,
-    x: &RistrettoPoint,
+    x: &[u8; 32],
 ) {
+    let x_point = CompressedRistretto::from_slice(&x[..]);
+    let x = x_point.decompress().unwrap();
+
     let user_record: UserRecord =
         USER_MAP.lock().unwrap().get(username).unwrap().clone();
 

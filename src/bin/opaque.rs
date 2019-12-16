@@ -490,7 +490,7 @@ fn main() {
 
     //    let ke_3 = ke_2;
 
-    authenticate_finalize(username, &encrypted_ke_3, &ke_1);
+    authenticate_finalize(username, &encrypted_ke_3, &ke_1.compress().as_bytes());
 
     // run the specified KE protocol using their respective public and
     // private keys
