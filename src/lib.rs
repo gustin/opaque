@@ -261,6 +261,7 @@ pub fn authenticate_finalize(
     let nonce_dh: GenericArray<u8, typenum::U12> =
         GenericArray::clone_from_slice(&okm_dh[32..44]);
 
+    println!("Key 3 Size: {}", ke_3.capacity());
     let key_3_decrypted = aead_dh
         .decrypt(&nonce_dh, ke_3.as_slice())
         .expect("decryption failure");

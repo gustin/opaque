@@ -389,7 +389,10 @@ fn main() {
 
     println!("-) beta {:?}:", beta_a);
     println!("-) v {:?}:", v_a);
+    println!("-) KE 2: {:?}", ke_2);
+    println!("-) KE 2 Size: {:?}", ke_2.capacity());
     println!("-) AuthEnv {:?}:", envelope_a);
+    println!("-) AuthEnv Size {:?}:", envelope_a.capacity());
 
     let inverse_r_a = r_a.invert();
     let sub_beta_a = beta_a * inverse_r_a;
