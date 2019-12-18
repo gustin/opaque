@@ -460,6 +460,12 @@ fn main() {
     println!("-) DH nonce 96 bit {:?}:", nonce_dh);
     // Guard: verify HMAC on B
 
+    let mut cspring = OsRng::new().unwrap();
+    let keypair: Keypair = Keypair::generate(&mut cspring);
+
+    let priv_u = keypair.secret.to_bytes();
+    let pub_u = keypair.public.to_bytes();
+
     let key_2_decrypted = aead_dh
         .decrypt(&nonce_dh, ke_2.as_slice())
         .expect("decryption failure");

@@ -51,6 +51,8 @@ pub fn registration_start(
     username: &str,
     alpha: &[u8; 32],
 ) -> ([u8; 32], [u8; 32], [u8; 32]) {
+    println!("=> Rusty Registration Start");
+    println!("Alpha: {:?}", alpha);
     let alpha_point = CompressedRistretto::from_slice(&alpha[..]);
     let alpha = alpha_point.decompress().unwrap();
 
@@ -120,12 +122,13 @@ pub fn registration_finalize(
     pub_u: &[u8; 32],
     envelope: &Vec<u8>,
 ) {
-    println!("Extracting Username");
+    println!("=> Rusty Registration Finalize");
+    println!("PubU: {:?}", pub_u);
+    println!("Envelope: {:?}", envelope);
     let mut user_record =
         USER_MAP.lock().unwrap().get(username).unwrap().clone();
-    println!("...extracted");
     user_record.envelope = Some(envelope.to_vec());
-    println!("Obtained envelope");
+
     user_record.pub_u = Some(*pub_u);
     USER_MAP
         .lock()
@@ -140,6 +143,8 @@ pub fn authenticate_start(
     ke_1: &[u8; 32],
 ) -> ([u8; 32], [u8; 32], Vec<u8>, Vec<u8>, [u8; 32]) {
     println!("====> Rusty Authentication Start");
+    println!("Alpha: {:?}", alpha);
+    println!("KE 1: {:?}", ke_1);
     let alpha_point = CompressedRistretto::from_slice(&alpha[..]);
     let alpha = alpha_point.decompress().unwrap();
 
@@ -241,6 +246,9 @@ pub fn authenticate_finalize(
     ke_3: &Vec<u8>,
     x: &[u8; 32],
 ) {
+    println!("=> Rusty Authenticate Finalize");
+    println!("Key 3: {:?}:", ke_3);
+    println!("X: {:?}:", x);
     let x_point = CompressedRistretto::from_slice(&x[..]);
     let x = x_point.decompress().unwrap();
 
@@ -255,12 +263,17 @@ pub fn authenticate_finalize(
     let info = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap();
     hkdf.expand(&info, &mut okm_dh).unwrap();
 
+    println!("-) HKDF OKM {}", hex::encode(&okm_dh[..]));
+
     let encryption_key_dh: GenericArray<u8, typenum::U32> =
         GenericArray::clone_from_slice(&okm_dh[0..32]);
     let aead_dh = Aes256GcmSiv::new(encryption_key_dh);
     let nonce_dh: GenericArray<u8, typenum::U12> =
         GenericArray::clone_from_slice(&okm_dh[32..44]);
 
+    println!("Encryption Key DH: {:?}", encryption_key_dh);
+    println!("Nonce DH: {:?}", nonce_dh);
+    println!("KE 3 Slice: {:?}", ke_3.as_slice());
     println!("Key 3 Size: {}", ke_3.capacity());
     let key_3_decrypted = aead_dh
         .decrypt(&nonce_dh, ke_3.as_slice())
@@ -268,7 +281,7 @@ pub fn authenticate_finalize(
     let key_3_for_realz: KeyExchange =
         bincode::deserialize(key_3_decrypted.as_slice()).unwrap();
 
-    let pub_u = PublicKey::from_bytes(&user_record.pub_u.unwrap()).unwrap();
+    let pub_u = PublicKey::from_bytes(&key_3_for_realz.identity).unwrap();
 
     let mut prehashed: Sha3_512 = Sha3_512::new();
     prehashed.input(ke_2.compress().as_bytes());
