@@ -1,3 +1,11 @@
+/*
+ * Copyright 2019 Plaintext, LLC - All Rights Reserved
+ *
+ * Unauthorized copying of this file, via any medium is strictly prohibited.
+ * Proprietary and confidential.
+ *
+ */
+
 use serde::{Deserialize, Serialize};
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;

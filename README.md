@@ -39,3 +39,8 @@ Use Ring for CSPRING: https://docs.rs/ring/0.16.9/ring/rand/index.html
 
     cargo build --target wasm32-unknown-unknown
 
+## Copyright
+
+    go get -u github.com/fbiville/headache/cmd/headache
+    headache
+
