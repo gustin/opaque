@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
+
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct KeyExchange<'a> {

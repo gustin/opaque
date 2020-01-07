@@ -10,18 +10,18 @@ pub mod sigma;
 
 use crate::sigma::KeyExchange;
 
-use bincode::{deserialize, serialize};
+
 use serde::{Deserialize, Serialize};
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
-use rand_core::RngCore;
+
 use rand_os::OsRng;
 
-use ed25519_dalek::{Keypair, PublicKey, SecretKey, Signature};
+use ed25519_dalek::{Keypair, PublicKey, Signature};
 
-use aes_gcm_siv::aead::{generic_array::GenericArray, Aead, NewAead, Payload};
+use aes_gcm_siv::aead::{generic_array::GenericArray, Aead, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
 
 use lazy_static::lazy_static;

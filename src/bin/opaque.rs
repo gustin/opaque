@@ -9,15 +9,15 @@
 use opaque::sigma::KeyExchange;
 use opaque::*;
 
-use bincode::{deserialize, serialize};
-use rand_chacha::ChaCha20Rng;
+
+
 use rand_os::OsRng;
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
 
-use aes_gcm_siv::aead::{generic_array::GenericArray, Aead, NewAead, Payload};
+use aes_gcm_siv::aead::{generic_array::GenericArray, Aead, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
 
 // Warning: No security audits of the AES-GCM-Siv crate have ever been performed,
@@ -33,11 +33,11 @@ use aes_gcm_siv::Aes256GcmSiv;
 // of high performance AES-NI and CLMUL CPU intrinsics
 
 use hkdf::Hkdf;
-use hmac::{Hmac, Mac};
+use hmac::{Mac};
 use sha2::Sha512;
 use sha3::{Digest, Sha3_512};
 
-use ed25519_dalek::{Keypair, PublicKey, SecretKey, Signature};
+use ed25519_dalek::{Keypair, Signature};
 
 fn OPRF(alpha: &RistrettoPoint, g: &RistrettoPoint) -> RistrettoPoint {
     // OPAQUE uses a specific OPRF instantiation, called DH-OPRF, where the
@@ -88,7 +88,7 @@ fn OPRF(alpha: &RistrettoPoint, g: &RistrettoPoint) -> RistrettoPoint {
 
     // DH-OPRF domain: any string
     // -> "plaintext"
-    let domain = "plaintext";
+    let _domain = "plaintext";
 
     // DH-OPRF range: The range of the hash function H
     // -> what is the range of the blake2? is it 512? 2^512
@@ -113,9 +113,9 @@ fn OPRF(alpha: &RistrettoPoint, g: &RistrettoPoint) -> RistrettoPoint {
     let mut cspring = OsRng::new().unwrap();
     /* Note: Think about feeding this to HDKF after generating with ChaCha */
     let k = Scalar::random(&mut cspring);
-    let v = g * k;
+    let _v = g * k;
     let beta = alpha * k;
-    return beta;
+    beta
 
     // alpha=(H'(x))^r in the first message and set the
     // function output to H(x,v,beta^{1/r})
@@ -308,9 +308,9 @@ fn main() {
     // https://signal.org/docs/specifications/doubleratchet/#recommended-cryptographic-algorithms
 
     let envelope = Envelope {
-        priv_u: priv_u,
-        pub_u: pub_u,
-        pub_s: pub_s,
+        priv_u,
+        pub_u,
+        pub_s,
     };
 
     println!("=) EnvU {:?}:2", envelope);
@@ -374,8 +374,8 @@ fn main() {
     // Guard: consider using x25519_dalek ephemeral keys, though no signing
     let x = Scalar::random(&mut cspring);
     let ke_1 = RISTRETTO_BASEPOINT_POINT * x;
-    let nA = "";
-    let sidA = 1;
+    let _nA = "";
+    let _sidA = 1;
 
     println!("-) KE_1: {:?}", ke_1);
     let (beta_a, v_a, envelope_a, ke_2, y) = authenticate_start(
@@ -471,13 +471,13 @@ fn main() {
     let mut cspring = OsRng::new().unwrap();
     let keypair: Keypair = Keypair::generate(&mut cspring);
 
-    let priv_u = keypair.secret.to_bytes();
+    let _priv_u = keypair.secret.to_bytes();
     let pub_u = keypair.public.to_bytes();
 
     let key_2_decrypted = aead_dh
         .decrypt(&nonce_dh, ke_2.as_slice())
         .expect("decryption failure");
-    let key_2_for_realz: KeyExchange =
+    let _key_2_for_realz: KeyExchange =
         bincode::deserialize(key_2_decrypted.as_slice()).unwrap();
 
     // SIGa(g^y, g^x)
