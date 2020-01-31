@@ -27,7 +27,7 @@ pub struct Envelope {
 }
 
 pub fn registration_start(
-    password: String
+    password: &str
 ) -> ([u8; 32], [u8; 32], [u8; 32]) {
     let mut cspring = OsRng::new().unwrap();
     let keypair: Keypair = Keypair::generate(&mut cspring);
