@@ -9,8 +9,6 @@
 use opaque::sigma::KeyExchange;
 use opaque::*;
 
-
-
 use rand_os::OsRng;
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
@@ -33,7 +31,7 @@ use aes_gcm_siv::Aes256GcmSiv;
 // of high performance AES-NI and CLMUL CPU intrinsics
 
 use hkdf::Hkdf;
-use hmac::{Mac};
+use hmac::Mac;
 use sha2::Sha512;
 use sha3::{Digest, Sha3_512};
 
@@ -507,7 +505,11 @@ fn main() {
 
     //    let ke_3 = ke_2;
 
-    authenticate_finalize(username, &encrypted_ke_3, &ke_1.compress().as_bytes());
+    authenticate_finalize(
+        username,
+        &encrypted_ke_3,
+        &ke_1.compress().as_bytes(),
+    );
 
     // run the specified KE protocol using their respective public and
     // private keys

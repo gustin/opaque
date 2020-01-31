@@ -10,7 +10,6 @@ pub mod sigma;
 
 use crate::sigma::KeyExchange;
 
-
 use serde::{Deserialize, Serialize};
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
@@ -249,11 +248,7 @@ pub fn authenticate_start(
 }
 
 // NOTE: Think about gaming this function independent of authenticate_start
-pub fn authenticate_finalize(
-    username: &str,
-    ke_3: &Vec<u8>,
-    x: &[u8; 32],
-) {
+pub fn authenticate_finalize(username: &str, ke_3: &Vec<u8>, x: &[u8; 32]) {
     println!("=> Rusty Authenticate Finalize");
     println!("Key 3: {:?}:", ke_3);
     println!("X: {:?}:", x);

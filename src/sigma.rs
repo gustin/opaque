@@ -8,8 +8,6 @@
 
 use serde::{Deserialize, Serialize};
 
-
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct KeyExchange<'a> {
     pub identity: [u8; 32],
