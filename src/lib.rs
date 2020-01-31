@@ -6,6 +6,7 @@
  *
  */
 
+pub mod client;
 pub mod sigma;
 
 use crate::sigma::KeyExchange;
