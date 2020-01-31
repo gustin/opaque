@@ -26,9 +26,7 @@ pub struct Envelope {
     pub pub_s: [u8; 32],
 }
 
-pub fn registration_start(
-    password: &str
-) -> ([u8; 32], [u8; 32], [u8; 32]) {
+pub fn registration_start(password: &str) -> ([u8; 32], [u8; 32], [u8; 32]) {
     let mut cspring = OsRng::new().unwrap();
     let keypair: Keypair = Keypair::generate(&mut cspring);
 
@@ -50,9 +48,8 @@ pub fn registration_finalize(
     v: &[u8; 32],
     pub_u: &[u8; 32],
     pub_s: &[u8; 32],
-    priv_u: &[u8;32]
-) -> (Vec<u8>)
-{
+    priv_u: &[u8; 32],
+) -> (Vec<u8>) {
     let beta_point = CompressedRistretto::from_slice(&beta[..]);
     let beta = beta_point.decompress().unwrap();
     let v_point = CompressedRistretto::from_slice(&v[..]);
@@ -95,5 +92,3 @@ pub fn registration_finalize(
 
     env_cipher
 }
-
-
