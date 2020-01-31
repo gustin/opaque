@@ -43,7 +43,7 @@ pub fn registration_start(password: &str) -> ([u8; 32], [u8; 32], [u8; 32]) {
 }
 
 pub fn registration_finalize(
-    password: String,
+    password: &str,
     beta: &[u8; 32],
     v: &[u8; 32],
     pub_u: &[u8; 32],
