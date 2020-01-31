@@ -14,8 +14,6 @@ use curve25519_dalek::scalar::Scalar;
 use ed25519_dalek::{Keypair, Signature};
 use hkdf::Hkdf;
 use hmac::{Hmac, Mac};
-use opaque::sigma::KeyExchange;
-use opaque::*;
 use rand_os::OsRng;
 use serde::{Deserialize, Serialize};
 use sha2::Sha512;
@@ -28,8 +26,9 @@ pub struct Envelope {
     pub pub_s: [u8; 32],
 }
 
-pub fn registration_start(password: String)
--> ([u8; 32], [u8; 32], [u8; 32]) {
+pub fn registration_start(
+    password: String
+) -> ([u8; 32], [u8; 32], [u8; 32]) {
     let mut cspring = OsRng::new().unwrap();
     let keypair: Keypair = Keypair::generate(&mut cspring);
 
@@ -45,15 +44,23 @@ pub fn registration_start(password: String)
     (alpha, pub_u, priv_u)
 }
 
-pub fn registration_finalize(beta: &[u8; 32], v: &[u8; 32],
-                             password: String,
-                             pub_u: &[u8; 32], priv_u: &[u8;32])
--> ([u8; 32], Vec<u8>)
+pub fn registration_finalize(
+    password: String,
+    beta: &[u8; 32],
+    v: &[u8; 32],
+    pub_u: &[u8; 32],
+    pub_s: &[u8; 32],
+    priv_u: &[u8;32]
+) -> (Vec<u8>)
 {
     let beta_point = CompressedRistretto::from_slice(&beta[..]);
     let beta = beta_point.decompress().unwrap();
     let v_point = CompressedRistretto::from_slice(&v[..]);
     let v = v_point.decompress().unwrap();
+
+    // NOTE: R should be shared with registration start
+    let mut cspring = OsRng::new().unwrap();
+    let r = Scalar::random(&mut cspring);
 
     let inverse_r = r.invert();
     let sub_beta = beta * inverse_r;
@@ -66,12 +73,10 @@ pub fn registration_finalize(beta: &[u8; 32], v: &[u8; 32],
     hasher.input(sub_beta.compress().to_bytes());
     let rwd_u = hasher.result();
 
-    // => Registration 2
-
     let envelope = Envelope {
-        priv_u: priv_u,
-        pub_u: pub_u,
-        pub_s: pub_s,
+        priv_u: *priv_u,
+        pub_u: *pub_u,
+        pub_s: *pub_s,
     };
 
     let hkdf = Hkdf::<Sha512>::new(None, &rwd_u);
@@ -88,7 +93,7 @@ pub fn registration_finalize(beta: &[u8; 32], v: &[u8; 32],
     let payload: Vec<u8> = bincode::serialize(&envelope).unwrap();
     let env_cipher = aead.encrypt(&nonce, payload.as_slice()).unwrap();
 
-    (pub_u, env_cipher)
+    env_cipher
 }
 
 
