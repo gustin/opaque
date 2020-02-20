@@ -1,11 +1,3 @@
-/*
- * Copyright 2019 Plaintext, LLC - All Rights Reserved
- *
- * Unauthorized copying of this file, via any medium is strictly prohibited.
- * Proprietary and confidential.
- *
- */
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

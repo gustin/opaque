@@ -1,9 +1,0 @@
-{
-  "headerFile": "./COPYRIGHT",
-  "style": "SlashStar",
-  "includes": ["src/**/*.rs"],
-  "data": {
-    "Owner": "Plaintext, LLC"
-  }
-}
-
