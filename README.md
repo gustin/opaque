@@ -7,7 +7,7 @@ The asymmetric part of this aPAKE means that only one party knows the actual
 password; the password does not have to be revealed to both parties taking
 part in the exchange.
 
-OPAQUE is an IETF finalist the aPAKE recommendation.
+OPAQUE is an IETF candidate for aPAKE recommendation.
 
 ## Key Exchange
 
