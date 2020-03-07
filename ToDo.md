@@ -2,9 +2,10 @@
 
 Things to do, loosely held
 
-- [ ] Update README, README driven development.
+- [x] Update README, README driven development.
 - [ ] Abstract out KeyExchange
 - [ ] SIGMA Impl
+- [ ] Add constants for byte arrays.
 - [ ] Abstract out OPRF.
 - [ ] Add KDF specifically for stretching password pre-computation
 - [ ] Pluggable encryptions, make the whole system pluggable.
