@@ -12,7 +12,9 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha512;
 use sha3::{Digest, Sha3_512};
 
-type HmacSha512 = Hmac<512>;
+use crate::sigma::KeyExchange;
+
+type HmacSha512 = Hmac<Sha512>;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Envelope {
@@ -21,7 +23,7 @@ pub struct Envelope {
     pub pub_s: [u8; 32],
 }
 
-pub fn registration_start(password: &str) -> ([u8; 32], [u8; 32], [u8; 32]) {
+pub fn registration_start(password: &str) -> ([u8; 32], [u8; 64], [u8; 32], [u8; 32]) {
     let mut cspring = OsRng::new().unwrap();
     let keypair: Keypair = Keypair::generate(&mut cspring);
 
@@ -34,7 +36,7 @@ pub fn registration_start(password: &str) -> ([u8; 32], [u8; 32], [u8; 32]) {
     let alpha_point: RistrettoPoint = hash_prime * r;
     let alpha = alpha_point.compress().to_bytes();
 
-    (alpha, pub_u, priv_u)
+    (alpha, keypair.to_bytes(), pub_u, priv_u)
 }
 
 pub fn registration_finalize(
@@ -91,7 +93,7 @@ pub fn registration_finalize(
 pub fn authenticate_start(
     username: &str,
     password: &str,
-) -> ([u8; 32], [u8; 32]) {
+) -> ([u8; 32], [u8; 32], [u8; 32]) {
     let mut cspring = OsRng::new().unwrap();
     let keypair: Keypair = Keypair::generate(&mut cspring);
 
@@ -109,18 +111,19 @@ pub fn authenticate_start(
     let alpha = alpha_point.compress().to_bytes();
     let ke_1 = ke_1_point.compress().to_bytes();
 
-    (alpha, ke_1)
+    (alpha, ke_1, *x.as_bytes())
 }
 
 pub fn authenticate_finalize(
     password: &str,
-    pub_u: &[u8; 32],
+    keypair: &[u8; 64],
     envelope: &Vec<u8>,
     beta: &[u8; 32],
     v: &[u8; 32],
     ke_2: &Vec<u8>,
+    &x: &[u8; 32],
     &y: &[u8; 32],
-) -> (Vec<u8>, [u8; 32]) {
+) -> (Vec<u8>) {
     let beta_point = CompressedRistretto::from_slice(&beta[..]);
     let beta_a = beta_point.decompress().unwrap();
 
@@ -132,6 +135,8 @@ pub fn authenticate_finalize(
 
     // OPRF
     let mut cspring = OsRng::new().unwrap();
+    let keypair = Keypair::from_bytes(keypair).unwrap();
+
     let r_a = Scalar::random(&mut cspring);
 
     let inverse_r_a = r_a.invert();
@@ -139,7 +144,7 @@ pub fn authenticate_finalize(
 
     let mut hasher_a = Sha3_512::new();
     hasher_a.input(password.as_bytes()); // NOTE: Harden with a key derivitive, Section 3.4
-    hasher_a.input(v.compress().to_bytes());
+    hasher_a.input(v);
     hasher_a.input(sub_beta_a.compress().to_bytes());
     let rwd_u_a = hasher_a.result();
 
@@ -168,6 +173,9 @@ pub fn authenticate_finalize(
     // { A, SIGa(g^y, g^x), MAC(Km; A) } Ke
 
     // decrypt ke_2
+
+    // #SECURITY: Prove that all scalars are non-zero, init and inverse
+    let x = Scalar::from_bytes_mod_order(x);
     let dh: RistrettoPoint = x * y;
 
     let hkdf = Hkdf::<Sha512>::new(None, dh.compress().as_bytes());
@@ -190,16 +198,16 @@ pub fn authenticate_finalize(
     // SIGa(g^y, g^x)
     let mut prehashed: Sha3_512 = Sha3_512::new();
     prehashed.input(y.compress().as_bytes());
-    prehashed.input(ke_1);
+    prehashed.input(ke_2);
     let context: &[u8] = b"SpecificCustomerDomainName";
     let sig: Signature = keypair.sign_prehashed(prehashed, Some(context));
 
     // MAC(Km; PubS)
     let mut mac = HmacSha512::new_varkey(&okm_dh[44..108]).unwrap();
-    mac.input(&pub_u);
+    mac.input(&keypair.public.to_bytes());
 
     let key_exchange_3 = KeyExchange {
-        identity: pub_u,
+        identity: keypair.public.to_bytes(),
         signature: &sig.to_bytes(),
         mac: mac.result().code().as_slice().to_vec(),
     };
@@ -208,5 +216,5 @@ pub fn authenticate_finalize(
     let encrypted_ke_3 =
         aead_dh.encrypt(&nonce_dh, payload_dh.as_slice()).unwrap();
 
-    (encrypted_ke_3, &ke_1.compress().as_bytes())
+    encrypted_ke_3
 }
