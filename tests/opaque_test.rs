@@ -5,16 +5,12 @@ fn test_protocol() {
     let username = "jerrg";
     let password = "onelonelyhead";
 
-    let (alpha, keypair, pub_u, priv_u) = opaque::client::registration_start(&password);
+    let (alpha, keypair, pub_u, priv_u) =
+        opaque::client::registration_start(&password);
     let (beta, v, pub_s) = opaque::registration_start(&username, &alpha);
 
     let envelope = opaque::client::registration_finalize(
-        &password,
-        &beta,
-        &v,
-        &pub_u,
-        &pub_s,
-        &priv_u,
+        &password, &beta, &v, &pub_u, &pub_s, &priv_u,
     );
     opaque::registration_finalize(&username, &pub_u, &envelope);
 
