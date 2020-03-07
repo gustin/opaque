@@ -1,0 +1,13 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    markdown_helper (2.5.3)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  markdown_helper (~> 2.5, >= 2.5.3)!
+
+BUNDLED WITH
+   2.1.4
