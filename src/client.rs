@@ -1,4 +1,3 @@
-
 use aes_gcm_siv::aead::{generic_array::GenericArray, Aead, NewAead, Payload};
 use aes_gcm_siv::Aes256GcmSiv;
 use bincode::{deserialize, serialize};
@@ -158,7 +157,7 @@ pub fn authenticate_finalize(
         GenericArray::clone_from_slice(&okm_a[32..44]);
 
     let envelope_decrypted = aead
-        .decrypt(&nonce_a, result.envelope.as_slice())
+        .decrypt(&nonce_a, envelope.as_slice())
         .expect("decryption failure");
     let envelope_for_realz: Envelope =
         bincode::deserialize(envelope_decrypted.as_slice()).unwrap();
@@ -183,7 +182,7 @@ pub fn authenticate_finalize(
         GenericArray::clone_from_slice(&okm_dh[32..44]);
 
     let key_2_decrypted = aead_dh
-        .decrypt(&nonce_dh, result.key.as_slice())
+        .decrypt(&nonce_dh, ke_2.as_slice())
         .expect("decryption failure");
     let key_2_for_realz: KeyExchange =
         bincode::deserialize(key_2_decrypted.as_slice()).unwrap();

@@ -18,7 +18,8 @@ fn test_protocol() {
     let (beta, v, envelope, ke_2, y) =
         opaque::authenticate_start(&username, &alpha, &ke_1);
 
-    let (ke_3, x) =
-        opaque::client::authenticate_finalize(&pub_u, &envelope, &beta, &v, &ke_2, &y);
+    let (ke_3, x) = opaque::client::authenticate_finalize(
+        &pub_u, &envelope, &beta, &v, &ke_2, &y,
+    );
     opaque::authenticate_finalize(&username, &ke_3, &x);
 }
