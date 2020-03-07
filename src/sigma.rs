@@ -33,7 +33,7 @@ impl KeyExchange<'_> {
         KeyExchange {
             identity: [0u8; 32],
             signature: &[0u8; 64],
-            mac: vec![1,2,3,4],
+            mac: vec![1, 2, 3, 4],
         }
     }
 }
