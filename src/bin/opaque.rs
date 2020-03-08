@@ -206,7 +206,7 @@ fn main() {
     let pub_u = keypair.public.to_bytes();
 
     // basic password for now
-    let username = "barry";
+    let username = "jerryg";
     let pwd_u = "fizzbangpopdog";
 
     println!("-------------------------------------------------------");
