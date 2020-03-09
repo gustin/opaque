@@ -25,7 +25,7 @@ pub struct Envelope {
 
 pub fn registration_start(
     password: &str,
-) -> ([u8; 32], [u8; 64], [u8; 32], [u8; 32]) {
+) -> ([u8; 32], [u8; 64], [u8; 32], [u8; 32], [u8; 32]) {
     let mut cspring = OsRng::new().unwrap();
     let keypair: Keypair = Keypair::generate(&mut cspring);
 
@@ -38,7 +38,7 @@ pub fn registration_start(
     let alpha_point: RistrettoPoint = hash_prime * r;
     let alpha = alpha_point.compress().to_bytes();
 
-    (alpha, keypair.to_bytes(), pub_u, priv_u)
+    (alpha, keypair.to_bytes(), pub_u, priv_u, r.to_bytes())
 }
 
 pub fn registration_finalize(
@@ -48,15 +48,14 @@ pub fn registration_finalize(
     pub_u: &[u8; 32],
     pub_s: &[u8; 32],
     priv_u: &[u8; 32],
+    r: &[u8; 32]
 ) -> (Vec<u8>) {
     let beta_point = CompressedRistretto::from_slice(&beta[..]);
     let beta = beta_point.decompress().unwrap();
     let v_point = CompressedRistretto::from_slice(&v[..]);
     let v = v_point.decompress().unwrap();
 
-    // NOTE: R should be shared with registration start
-    let mut cspring = OsRng::new().unwrap();
-    let r = Scalar::random(&mut cspring);
+    let r = Scalar::from_canonical_bytes(*r).unwrap();
 
     let inverse_r = r.invert();
     let sub_beta = beta * inverse_r;
@@ -95,17 +94,17 @@ pub fn registration_finalize(
 pub fn authenticate_start(
     username: &str,
     password: &str,
-) -> ([u8; 32], [u8; 32], [u8; 32]) {
+) -> ([u8; 32], [u8; 32], [u8; 32], [u8; 32]) {
     let mut cspring = OsRng::new().unwrap();
     let keypair: Keypair = Keypair::generate(&mut cspring);
 
     let priv_u = keypair.secret.to_bytes();
     let pub_u = keypair.public.to_bytes();
 
-    let r_a = Scalar::random(&mut cspring);
-    let hash_prime_a =
+    let r = Scalar::random(&mut cspring);
+    let hash_prime =
         RistrettoPoint::hash_from_bytes::<Sha3_512>(password.as_bytes());
-    let alpha_point: RistrettoPoint = hash_prime_a * r_a;
+    let alpha_point: RistrettoPoint = hash_prime * r;
 
     let x = Scalar::random(&mut cspring);
     let ke_1_point = RISTRETTO_BASEPOINT_POINT * x;
@@ -113,7 +112,7 @@ pub fn authenticate_start(
     let alpha = alpha_point.compress().to_bytes();
     let ke_1 = ke_1_point.compress().to_bytes();
 
-    (alpha, ke_1, *x.as_bytes())
+    (alpha, ke_1, x.to_bytes(), r.to_bytes())
 }
 
 pub fn authenticate_finalize(
@@ -125,12 +124,13 @@ pub fn authenticate_finalize(
     ke_2: &Vec<u8>,
     &x: &[u8; 32],
     &y: &[u8; 32],
+    &r: &[u8; 32],
 ) -> (Vec<u8>) {
     let beta_point = CompressedRistretto::from_slice(&beta[..]);
-    let beta_a = beta_point.decompress().unwrap();
+    let beta = beta_point.decompress().unwrap();
 
     let v_point = CompressedRistretto::from_slice(&v[..]);
-    let v_a = v_point.decompress().unwrap();
+    let v = v_point.decompress().unwrap();
 
     let y_point = CompressedRistretto::from_slice(&y[..]);
     let y = y_point.decompress().unwrap();
@@ -139,32 +139,32 @@ pub fn authenticate_finalize(
     let mut cspring = OsRng::new().unwrap();
     let keypair = Keypair::from_bytes(keypair).unwrap();
 
-    let r_a = Scalar::random(&mut cspring);
+    let r = Scalar::from_canonical_bytes(r).unwrap();
 
-    let inverse_r_a = r_a.invert();
-    let sub_beta_a = beta_a * inverse_r_a;
+    let inverse_r = r.invert();
+    let sub_beta = beta * inverse_r;
 
-    let mut hasher_a = Sha3_512::new();
-    hasher_a.input(password.as_bytes()); // NOTE: Harden with a key derivitive, Section 3.4
-    hasher_a.input(v);
-    hasher_a.input(sub_beta_a.compress().to_bytes());
-    let rwd_u_a = hasher_a.result();
+    let mut hasher = Sha3_512::new();
+    hasher.input(password.as_bytes()); // NOTE: Harden with a key derivitive, Section 3.4
+    hasher.input(v.compress().to_bytes());
+    hasher.input(sub_beta.compress().to_bytes());
+    let rwd_u = hasher.result();
 
     // Use rwd_u_a to decrypt envelope
 
-    let hkdf_a = Hkdf::<Sha512>::new(None, &rwd_u_a);
-    let mut okm_a = [0u8; 44]; // 32 byte key + 96 bit nonce
-    let info_a = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap(); // make info the domain string, +
-    hkdf_a.expand(&info_a, &mut okm_a).unwrap();
+    let hkdf = Hkdf::<Sha512>::new(None, &rwd_u);
+    let mut okm = [0u8; 44]; // 32 byte key + 96 bit nonce
+    let info = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap(); // make info the domain string, +
+    hkdf.expand(&info, &mut okm).unwrap();
 
-    let encryption_key_a: GenericArray<u8, typenum::U32> =
-        GenericArray::clone_from_slice(&okm_a[0..32]);
-    let aead = Aes256GcmSiv::new(encryption_key_a);
-    let nonce_a: GenericArray<u8, typenum::U12> =
-        GenericArray::clone_from_slice(&okm_a[32..44]);
+    let encryption_key: GenericArray<u8, typenum::U32> =
+        GenericArray::clone_from_slice(&okm[0..32]);
+    let aead = Aes256GcmSiv::new(encryption_key);
+    let nonce: GenericArray<u8, typenum::U12> =
+        GenericArray::clone_from_slice(&okm[32..44]);
 
     let envelope_decrypted = aead
-        .decrypt(&nonce_a, envelope.as_slice())
+        .decrypt(&nonce, envelope.as_slice())
         .expect("decryption failure");
     let envelope_for_realz: Envelope =
         bincode::deserialize(envelope_decrypted.as_slice()).unwrap();
@@ -177,7 +177,7 @@ pub fn authenticate_finalize(
     // decrypt ke_2
 
     // #SECURITY: Prove that all scalars are non-zero, init and inverse
-    let x = Scalar::from_bytes_mod_order(x);
+    let x = Scalar::from_canonical_bytes(x).unwrap();
     let dh: RistrettoPoint = x * y;
 
     let hkdf = Hkdf::<Sha512>::new(None, dh.compress().as_bytes());
