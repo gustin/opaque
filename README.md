@@ -1,5 +1,4 @@
 # OPAQUE Protocol
-
 The OPAQUE protocol is an asymmetric password-authenticated key exchange, PAKE.
 
 A PAKE is a way to exchange cryptographic keys with the knowledge of a password.
@@ -17,8 +16,8 @@ protocols. The full-fledged version, protecting identity.
 
 ## OPRF
 
-OPAQUE interleaves an oblivious pseudorandom function, an oblivious pseudo-random
-protocol (OPRF) and a key-exchange protocol.
+OPAQUE interleaves an oblivious pseudorandom function (OPRF) and a key-exchange
+protocol.
 
 An (OPRF)[https://tools.ietf.org/html/draft-irtf-cfrg-voprf-02] is a way for
 two parties to take part in a computation in which one party provides the input

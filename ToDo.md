@@ -17,6 +17,9 @@ Things to do, loosely held
       - [ ] KDF: eg. Argon 2, Blake 3
       - [ ] AES-GCM-SIV: eg. ChaCha-Poly
       - [ ] SHA512: eg. Blake3
+- [ ] Varied storage
+  - [ ] Diesel integration?
+  - [ ] Storage trait
 - [ ] Commit Schemes
 
 
