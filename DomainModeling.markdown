@@ -7,9 +7,38 @@ like Pascal from back in the 90's.
 
 ![turbo](https://upload.wikimedia.org/wikipedia/commons/d/df/Turbo_Pascal_7.0_Scrren.png)
 
-### Models
+### Modules
 
-### Key Exchange
+## OPRF
+
+### Client
+
+  - Registration Start: Calculates Alpha, KeyPair (pub/private), R
+  - Registration Finalize: Calculates Envelope Ciphered
+
+Shared between calls: password, pub_u, pub_s, priv_u, R
+
+  - Authenticate Start: Calculates Alpha, R
+  - Authenticate Final: Calculates
+
+Shared between calls: password, keypair, R
+
+### Server
+
+  - Registration Start: Calculates beta, v, pub_s
+  - Registration Finalize: Stores result
+
+  - Authentication Start:
+  - Authentication Finalize:
+
+Shared between calls:
+
+## OPAQUE
+
+  ### Structs
+
+
+## Key Exchange
 
   Trait:
     * ke_1 - generate the first key for key exchange.
@@ -29,6 +58,5 @@ the above triats
 
 
 
-## OPRF
 
 
