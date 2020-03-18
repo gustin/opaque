@@ -7,6 +7,7 @@ Things to do, loosely held
 - [ ] SIGMA Impl
 - [ ] Add constants for byte arrays.
 - [ ] Abstract out OPRF.
+- [ ] Zeroize.
 - [ ] Add KDF specifically for stretching password pre-computation
 - [ ] Pluggable encryptions, make the whole system pluggable.
   - [ ] Pluggable key exchange, NOISE, etc
