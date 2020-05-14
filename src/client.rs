@@ -122,9 +122,9 @@ pub fn authenticate_finalize(
     beta: &[u8; 32],
     v: &[u8; 32],
     ke_2: &Vec<u8>,
-    &x: &[u8; 32],
-    &y: &[u8; 32],
-    &r: &[u8; 32],
+    x: &[u8; 32],
+    y: &[u8; 32],
+    r: &[u8; 32],
 ) -> (Vec<u8>) {
     let beta_point = CompressedRistretto::from_slice(&beta[..]);
     let beta = beta_point.decompress().unwrap();
@@ -139,7 +139,8 @@ pub fn authenticate_finalize(
     let mut cspring = OsRng::new().unwrap();
     let keypair = Keypair::from_bytes(keypair).unwrap();
 
-    let r = Scalar::from_canonical_bytes(r).unwrap();
+    // is_canonical
+    let r = Scalar::from_canonical_bytes(*r).unwrap();
 
     let inverse_r = r.invert();
     let sub_beta = beta * inverse_r;
@@ -177,7 +178,7 @@ pub fn authenticate_finalize(
     // decrypt ke_2
 
     // #SECURITY: Prove that all scalars are non-zero, init and inverse
-    let x = Scalar::from_canonical_bytes(x).unwrap();
+    let x = Scalar::from_canonical_bytes(*x).unwrap();
     let dh: RistrettoPoint = x * y;
 
     let hkdf = Hkdf::<Sha512>::new(None, dh.compress().as_bytes());
