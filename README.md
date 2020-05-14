@@ -66,11 +66,9 @@ https://pdfs.semanticscholar.org/642b/d1bbc86c7750cef9fa770e9e4ba86bd49eb9.pdf
 The Feldman VSS (verifiable secret sharing) is a way to take part in the DKG:
 https://ieeexplore.ieee.org/abstract/document/4568297/
 
-## Execute
-
-    cargo run --bin opaque
-
 ## Security
+
+🎸 There has not been a security audit performed on this package. 🎸
 
 OPAQUE has been proven to be resilient against pre-computation attacks
 in this [whitepaper](https://eprint.iacr.org/2018/163.pdf).
@@ -89,19 +87,22 @@ force attack, emulating this protocol, could be used. The passwords
 are stretched in a way to make this computationally intensive. Cryptographic
 ways to mitigate this will be explored.
 
+🎸 There has not been a security audit performed on this package. 🎸
 
+## Things to do..
 
-
-
-
-
-
-Threadshold
-
-
+A more detailed list of things Todo:
 @[:markdown](ToDo.md)
 
-🎸 NOTE: There has not been a security audit performed on this package. 🎸
+## Execute
+
+    cargo run --bin opaque
+
+## Testing
+
+A set of OPAQUE test vectors are tested against:
+
+    cargo test
 
 
 
