@@ -1,4 +1,6 @@
 pub mod client;
+mod envelope;
+mod key_exchange;
 pub mod sigma;
 
 use crate::sigma::KeyExchange;
@@ -310,7 +312,7 @@ mod tests {
             225, 131, 110, 168, 70, 25, 251, 143, 69, 92, 254, 227, 213, 121,
             165, 35, 195, 29,
         ];
-        let (beta, v, pub_s) = registration_start(&username, &alpha);
+        let (_beta, _v, _pub_s) = registration_start(&username, &alpha);
 
         let pub_u: [u8; 32] = [
             207, 22, 253, 11, 52, 222, 99, 90, 81, 190, 238, 194, 251, 75, 74,
@@ -340,7 +342,7 @@ mod tests {
             236, 246, 53, 133, 85, 149, 25, 244, 215, 69, 178, 20, 242, 112,
             154, 116, 41,
         ];
-        let (bete, v, envelope, key, y) =
+        let (_beta, _v, _envelope, _key, _y) =
             authenticate_start(&username, &alpha, &key);
 
         let key: [u8; 192] = [

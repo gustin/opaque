@@ -2,7 +2,6 @@ use opaque::sigma::KeyExchange;
 use opaque::*;
 
 use rand_os::OsRng;
-
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
@@ -29,7 +28,7 @@ use sha3::{Digest, Sha3_512};
 
 use ed25519_dalek::{Keypair, Signature};
 
-fn OPRF(alpha: &RistrettoPoint, g: &RistrettoPoint) -> RistrettoPoint {
+fn _oprf(alpha: &RistrettoPoint, g: &RistrettoPoint) -> RistrettoPoint {
     // OPAQUE uses a specific OPRF instantiation, called DH-OPRF, where the
     // PRF, denoted F, is defined as follows.
 
@@ -155,7 +154,7 @@ fn OPRF(alpha: &RistrettoPoint, g: &RistrettoPoint) -> RistrettoPoint {
     Their shared secret, K:
         4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742
 */
-fn DH() {
+fn _dh() {
     // instead of transmitting a value “x”, the value “2^x (mod p)” is transmitted,
     // where “p” is a large prime number greater than 10⁶⁰⁰.
     //
@@ -364,8 +363,8 @@ fn main() {
     // Guard: consider using x25519_dalek ephemeral keys, though no signing
     let x = Scalar::random(&mut cspring);
     let ke_1 = RISTRETTO_BASEPOINT_POINT * x;
-    let _nA = "";
-    let _sidA = 1;
+    let _n_a = "";
+    let _sid_a = 1;
 
     println!("-) KE_1: {:?}", ke_1);
     let (beta_a, v_a, envelope_a, ke_2, y) = authenticate_start(

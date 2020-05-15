@@ -10,7 +10,7 @@ fn test_protocol() {
     let (beta, v, pub_s) = opaque::registration_start(&username, &alpha);
 
     let envelope = opaque::client::registration_finalize(
-        &password, &beta, &v, &pub_u, &pub_s, &priv_u, &r
+        &password, &beta, &v, &pub_u, &pub_s, &priv_u, &r,
     );
     opaque::registration_finalize(&username, &pub_u, &envelope);
 

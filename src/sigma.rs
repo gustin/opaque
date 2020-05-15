@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::error::Error;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct KeyExchange<'a> {
@@ -29,7 +28,7 @@ impl KeyExchange<'_> {
     /// If you give this function bytes which do not represent a KeyExchange
     /// it will be broken.
     ///
-    pub fn from_bytes<'a>(bytes: &'a [u8]) -> KeyExchange {
+    pub fn from_bytes<'a>(_bytes: &'a [u8]) -> KeyExchange {
         KeyExchange {
             identity: [0u8; 32],
             signature: &[0u8; 64],
@@ -38,13 +37,23 @@ impl KeyExchange<'_> {
     }
 }
 
+// let ke_1 = RISTRETTO_BASEPOINT_POINT * x;
+// let ke_2: RistrettoPoint = RISTRETTO_BASEPOINT_POINT * user_record.k_u;
+
+//
+//
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn key_1() {
-        let key_bytes = [0u8; 32];
-        let key_exchange = KeyExchange::from_bytes(&key_bytes);
+        let key_bytes: [u8; 32] = [
+            72, 79, 202, 45, 141, 212, 156, 96, 121, 69, 228, 3, 178, 12, 144,
+            236, 246, 53, 133, 85, 149, 25, 244, 215, 69, 178, 20, 242, 112,
+            154, 116, 41,
+        ];
+        let _key_exchange = KeyExchange::from_bytes(&key_bytes);
     }
 }

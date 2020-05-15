@@ -1,6 +1,5 @@
-use aes_gcm_siv::aead::{generic_array::GenericArray, Aead, NewAead, Payload};
+use aes_gcm_siv::aead::{generic_array::GenericArray, Aead, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
-use bincode::{deserialize, serialize};
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
@@ -48,8 +47,8 @@ pub fn registration_finalize(
     pub_u: &[u8; 32],
     pub_s: &[u8; 32],
     priv_u: &[u8; 32],
-    r: &[u8; 32]
-) -> (Vec<u8>) {
+    r: &[u8; 32],
+) -> Vec<u8> {
     let beta_point = CompressedRistretto::from_slice(&beta[..]);
     let beta = beta_point.decompress().unwrap();
     let v_point = CompressedRistretto::from_slice(&v[..]);
@@ -92,14 +91,10 @@ pub fn registration_finalize(
 }
 
 pub fn authenticate_start(
-    username: &str,
+    _username: &str,
     password: &str,
 ) -> ([u8; 32], [u8; 32], [u8; 32], [u8; 32]) {
     let mut cspring = OsRng::new().unwrap();
-    let keypair: Keypair = Keypair::generate(&mut cspring);
-
-    let priv_u = keypair.secret.to_bytes();
-    let pub_u = keypair.public.to_bytes();
 
     let r = Scalar::random(&mut cspring);
     let hash_prime =
@@ -125,7 +120,7 @@ pub fn authenticate_finalize(
     x: &[u8; 32],
     y: &[u8; 32],
     r: &[u8; 32],
-) -> (Vec<u8>) {
+) -> Vec<u8> {
     let beta_point = CompressedRistretto::from_slice(&beta[..]);
     let beta = beta_point.decompress().unwrap();
 
@@ -136,7 +131,6 @@ pub fn authenticate_finalize(
     let y = y_point.decompress().unwrap();
 
     // OPRF
-    let mut cspring = OsRng::new().unwrap();
     let keypair = Keypair::from_bytes(keypair).unwrap();
 
     // is_canonical
@@ -167,7 +161,7 @@ pub fn authenticate_finalize(
     let envelope_decrypted = aead
         .decrypt(&nonce, envelope.as_slice())
         .expect("decryption failure");
-    let envelope_for_realz: Envelope =
+    let _envelope_for_realz: Envelope =
         bincode::deserialize(envelope_decrypted.as_slice()).unwrap();
 
     // SIGMA
@@ -192,11 +186,9 @@ pub fn authenticate_finalize(
     let nonce_dh: GenericArray<u8, typenum::U12> =
         GenericArray::clone_from_slice(&okm_dh[32..44]);
 
-    let key_2_decrypted = aead_dh
+    let _key_2_decrypted = aead_dh
         .decrypt(&nonce_dh, ke_2.as_slice())
         .expect("decryption failure");
-    let key_2_for_realz: KeyExchange =
-        bincode::deserialize(key_2_decrypted.as_slice()).unwrap();
 
     // SIGa(g^y, g^x)
     let mut prehashed: Sha3_512 = Sha3_512::new();
