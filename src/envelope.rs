@@ -45,6 +45,8 @@ impl Envelope {
     }
 
     pub fn encrypt(&self, rwd_u: &[u8]) -> Vec<u8> {
+        // HKDF: HMAC-based Extract-and-Expand:https://tools.ietf.org/html/rfc5869
+        // see section on to "salt or not to salt", currently not salting
         let hkdf = Hkdf::<Sha512>::new(None, &rwd_u);
         let mut output_key_material = [0u8; 44]; // 32 byte key + 96 bit nonce
         let info = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap(); // domain separation

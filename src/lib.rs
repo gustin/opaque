@@ -1,11 +1,9 @@
 pub mod client;
-mod envelope;
+pub mod envelope;
 mod key_exchange;
 pub mod sigma;
 
 use crate::sigma::KeyExchange;
-
-use serde::{Deserialize, Serialize};
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
@@ -28,13 +26,6 @@ use sha2::Sha512; // NOTE: Drop sha2/sha3 to Blake for performance
 use sha3::{Digest, Sha3_512};
 
 pub type HmacSha512 = Hmac<Sha512>;
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Envelope {
-    pub priv_u: [u8; 32],
-    pub pub_u: [u8; 32],
-    pub pub_s: [u8; 32],
-}
 
 #[derive(Clone)]
 struct UserRecord {
