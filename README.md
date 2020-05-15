@@ -32,6 +32,7 @@ The exciting part is that the party performing the calculation learns nothing
 about the inputs provided, and the party providing the actual inputs
 only learns the outputs and nothing else about the computation.
 
+
 ### Verifiable
 
 A verifiable OPRF, a vOPRF, enables each party to prove that the computation
@@ -88,6 +89,24 @@ are stretched in a way to make this computationally intensive. Cryptographic
 ways to mitigate this will be explored.
 
 🎸 There has not been a security audit performed on this package. 🎸
+
+## Draft Version 4
+
+This library is currently built against [draft version 3](https://tools.ietf.org/html/draft-krawczyk-cfrg-opaque-03).
+
+[Draft 4 of Opaque](https://tools.ietf.org/html/draft-krawczyk-cfrg-opaque-04) was
+released on May 15th, 2020.
+
+The main changes seem to be:
+  * Details on how to build out the user Envelope:
+      * specified using AES-CTR and HMAC
+      * only encrypt-then-MAC is recommended
+      * GCM is allowed, but only GCM-then-HMAC
+  * Key exchange protocols is expanded:
+      * 3DH is added to the already described HMQV and SIGMA-I
+  * OPRF definition changed
+      * Does not include `vU = g^kU` when hashing
+      * This was proven to not be needed anymore
 
 ## Things to do..
 
