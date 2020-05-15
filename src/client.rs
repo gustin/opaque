@@ -1,5 +1,6 @@
 use aes_gcm_siv::aead::{generic_array::GenericArray, Aead, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
+use crate::envelope::*;
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
@@ -7,20 +8,12 @@ use ed25519_dalek::{Keypair, Signature};
 use hkdf::Hkdf;
 use hmac::{Hmac, Mac};
 use rand_os::OsRng;
-use serde::{Deserialize, Serialize};
 use sha2::Sha512;
 use sha3::{Digest, Sha3_512};
 
 use crate::sigma::KeyExchange;
 
 type HmacSha512 = Hmac<Sha512>;
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Envelope {
-    pub priv_u: [u8; 32],
-    pub pub_u: [u8; 32],
-    pub pub_s: [u8; 32],
-}
 
 pub fn registration_start(
     password: &str,
@@ -67,27 +60,8 @@ pub fn registration_finalize(
     hasher.input(sub_beta.compress().to_bytes());
     let rwd_u = hasher.result();
 
-    let envelope = Envelope {
-        priv_u: *priv_u,
-        pub_u: *pub_u,
-        pub_s: *pub_s,
-    };
-
-    let hkdf = Hkdf::<Sha512>::new(None, &rwd_u);
-    let mut output_key_material = [0u8; 44]; // 32 byte key + 96 bit nonce
-    let info = hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap(); // NOTE: check info value
-    hkdf.expand(&info, &mut output_key_material).unwrap();
-
-    let encryption_key: GenericArray<u8, typenum::U32> =
-        GenericArray::clone_from_slice(&output_key_material[0..32]);
-    let aead = Aes256GcmSiv::new(encryption_key);
-    let nonce: GenericArray<u8, typenum::U12> =
-        GenericArray::clone_from_slice(&output_key_material[32..44]);
-
-    let payload: Vec<u8> = bincode::serialize(&envelope).unwrap();
-    let env_cipher = aead.encrypt(&nonce, payload.as_slice()).unwrap();
-
-    env_cipher
+    let envelope = Envelope::new(pub_u, priv_u, pub_s).unwrap();
+    envelope.encrypt(&rwd_u)
 }
 
 pub fn authenticate_start(
@@ -158,11 +132,9 @@ pub fn authenticate_finalize(
     let nonce: GenericArray<u8, typenum::U12> =
         GenericArray::clone_from_slice(&okm[32..44]);
 
-    let envelope_decrypted = aead
+    let _envelope_decrypted = aead
         .decrypt(&nonce, envelope.as_slice())
         .expect("decryption failure");
-    let _envelope_for_realz: Envelope =
-        bincode::deserialize(envelope_decrypted.as_slice()).unwrap();
 
     // SIGMA
 
