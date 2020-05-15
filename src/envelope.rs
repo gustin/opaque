@@ -10,9 +10,9 @@ use sha2::Sha512;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Envelope {
-    pub pub_u: [u8; PUBLIC_KEY_SIZE],
-    pub pub_s: [u8; SECRET_KEY_SIZE],
-    pub priv_u: [u8; SECRET_KEY_SIZE],
+    pub_u: [u8; PUBLIC_KEY_SIZE],
+    pub_s: [u8; SECRET_KEY_SIZE],
+    priv_u: [u8; SECRET_KEY_SIZE],
 }
 
 impl Envelope {

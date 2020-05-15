@@ -1,13 +1,18 @@
 use opaque::sigma::KeyExchange;
 use opaque::*;
 
-use rand_os::OsRng;
+use aes_gcm_siv::aead::{generic_array::GenericArray, Aead, NewAead};
+use aes_gcm_siv::Aes256GcmSiv;
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
-
-use aes_gcm_siv::aead::{generic_array::GenericArray, Aead, NewAead};
-use aes_gcm_siv::Aes256GcmSiv;
+use ed25519_dalek::{Keypair, Signature};
+use hkdf::Hkdf;
+use hmac::Mac;
+use rand_os::OsRng;
+use serde::{Deserialize, Serialize};
+use sha2::Sha512;
+use sha3::{Digest, Sha3_512};
 
 // Warning: No security audits of the AES-GCM-Siv crate have ever been performed,
 // and it has not been thoroughly assessed to ensure its operation is
@@ -21,12 +26,12 @@ use aes_gcm_siv::Aes256GcmSiv;
 // When targeting modern x86/x86_64 CPUs, use RUSTFLAGS to take advantage
 // of high performance AES-NI and CLMUL CPU intrinsics
 
-use hkdf::Hkdf;
-use hmac::Mac;
-use sha2::Sha512;
-use sha3::{Digest, Sha3_512};
-
-use ed25519_dalek::{Keypair, Signature};
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Envelope {
+    pub priv_u: [u8; 32],
+    pub pub_u: [u8; 32],
+    pub pub_s: [u8; 32],
+}
 
 fn _oprf(alpha: &RistrettoPoint, g: &RistrettoPoint) -> RistrettoPoint {
     // OPAQUE uses a specific OPRF instantiation, called DH-OPRF, where the
@@ -364,7 +369,7 @@ fn main() {
     let x = Scalar::random(&mut cspring);
     let ke_1 = RISTRETTO_BASEPOINT_POINT * x;
     let _n_a = "";
-    let _sid_a = 1;
+    let _sida = 1;
 
     println!("-) KE_1: {:?}", ke_1);
     let (beta_a, v_a, envelope_a, ke_2, y) = authenticate_start(
@@ -476,7 +481,7 @@ fn main() {
     let context: &[u8] = b"SpecificCustomerDomainName";
     let sig: Signature = keypair.sign_prehashed(prehashed, Some(context));
 
-    // MAC(Km; PubS)
+    // MAC(Km; PubU)
     let mut mac = HmacSha512::new_varkey(&okm_dh[44..108]).unwrap();
     mac.input(&pub_u);
 
