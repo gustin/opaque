@@ -318,6 +318,9 @@ fn main() {
     println!("-) Hkdf Okm is {}", hex::encode(&output_key_material[..]));
 
     // AES-GCM-SIV
+    // Guard: Draft 4 clarifies that GCM can be used but should be HMAC too
+    // AES-CTR is now the example in the more detailed explanation of AEenv
+    // standard GCM is not random key robust, since we HKDF should be
 
     let encryption_key: GenericArray<u8, typenum::U32> =
         GenericArray::clone_from_slice(&output_key_material[0..32]);

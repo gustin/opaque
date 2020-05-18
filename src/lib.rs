@@ -173,8 +173,6 @@ pub fn authenticate_start(
     hkdf.expand(&info, &mut okm).unwrap();
 
     let mut cspring = OsRng::new().unwrap();
-    // Guard: Using ed25519 keys here for signing, x25519
-    // may (or should be) more efficient for DH
     let keypair: Keypair = Keypair::generate(&mut cspring);
     let public_key = keypair.public.to_bytes();
 
@@ -191,11 +189,6 @@ pub fn authenticate_start(
 
     println!("-) KE_2: {:?}", ke_2);
     println!("-) Shared Secret: {:?}", dh);
-    // Guard: HMAC crate:
-    // Be very careful using this method (code()), since incorrect use of the code
-    // value may permit timing attacks which defeat the security provided by the Mac
-    // trait.
-    //    println!("-) MAC(Km; PubS): {:?}", mac.result().code());
     println!("-) SIG(PrivS; g^x, g^y): {:?}", sig);
 
     let key_exchange = KeyExchange {
@@ -204,6 +197,7 @@ pub fn authenticate_start(
         mac: mac.result().code().as_slice().to_vec(),
     };
 
+    //
     let encryption_key: GenericArray<u8, typenum::U32> =
         GenericArray::clone_from_slice(&okm[0..32]);
     let aead = Aes256GcmSiv::new(encryption_key);
