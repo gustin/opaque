@@ -1,9 +1,10 @@
 pub mod client;
 pub mod envelope;
-mod key_exchange;
-pub mod sigma;
+pub mod key_exchange;
+pub mod opaque;
+pub mod oprf;
 
-use crate::sigma::KeyExchange;
+use crate::key_exchange::KeyExchange;
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};

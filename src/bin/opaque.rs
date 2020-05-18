@@ -1,5 +1,5 @@
-use opaque::sigma::KeyExchange;
-use opaque::*;
+use crate::key_exchange::KeyExchange;
+use ::opaque::*;
 
 use aes_gcm_siv::aead::{generic_array::GenericArray, Aead, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;

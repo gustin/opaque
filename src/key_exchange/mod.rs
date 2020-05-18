@@ -1,4 +1,10 @@
+pub mod sigma;
+pub mod triple_dh;
+
 use serde::{Deserialize, Serialize};
+
+pub const PUBLIC_KEY_SIZE: usize= 32;
+pub const SECRET_KEY_SIZE: usize = 32;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct KeyExchange<'a> {
@@ -9,6 +15,22 @@ pub struct KeyExchange<'a> {
     pub mac: Vec<u8>,
     // nonce, sid, info
 }
+
+pub trait KeyExchangeComm {
+    fn initiate_handshake(&self);
+    fn responder_handshake(&self);
+    fn initiator_response(&self);
+    fn responder_response(&self);
+
+    fn from_bytes(_bytes: &[u8]) -> KeyExchange {
+        KeyExchange {
+            identity: [0u8; 32],
+            signature: &[0u8; 64],
+            mac: vec![1, 2, 3, 4],
+        }
+    }
+}
+
 
 impl KeyExchange<'_> {
     ///##
@@ -37,11 +59,8 @@ impl KeyExchange<'_> {
     }
 }
 
-// let ke_1 = RISTRETTO_BASEPOINT_POINT * x;
-// let ke_2: RistrettoPoint = RISTRETTO_BASEPOINT_POINT * user_record.k_u;
 
-//
-//
+
 
 #[cfg(test)]
 mod tests {
@@ -57,3 +76,6 @@ mod tests {
         let _key_exchange = KeyExchange::from_bytes(&key_bytes);
     }
 }
+
+
+

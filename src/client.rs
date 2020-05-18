@@ -11,7 +11,7 @@ use rand_os::OsRng;
 use sha2::Sha512;
 use sha3::{Digest, Sha3_512};
 
-use crate::sigma::KeyExchange;
+use crate::key_exchange::KeyExchange;
 
 type HmacSha512 = Hmac<Sha512>;
 
