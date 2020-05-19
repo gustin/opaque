@@ -2,9 +2,9 @@ use crate::key_exchange::KeyExchange;
 use crate::key_exchange::KeyExchangeComm;
 
 
-pub struct TripleDh();
+pub struct TripleDiffie();
 
-impl KeyExchangeComm for TripleDh {
+impl KeyExchangeProtocol for TripleDiffie {
     fn initiate_handshake(&self) {
         // SIGMA-I
         // sidA, g^x, nA, infoA

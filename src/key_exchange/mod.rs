@@ -1,5 +1,5 @@
 pub mod sigma;
-pub mod triple_dh;
+pub mod triple_diffie;
 
 use serde::{Deserialize, Serialize};
 
@@ -16,7 +16,7 @@ pub struct KeyExchange<'a> {
     // nonce, sid, info
 }
 
-pub trait KeyExchangeComm {
+pub trait KeyExchangeProtocol {
     fn initiate_handshake(&self);
     fn responder_handshake(&self);
     fn initiator_response(&self);

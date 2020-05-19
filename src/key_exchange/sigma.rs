@@ -4,7 +4,7 @@ use crate::key_exchange::KeyExchangeComm;
 pub struct SigmaI();
 pub struct SigmaR();
 
-impl KeyExchangeComm for SigmaI {
+impl KeyExchangeProtocol for SigmaI {
     fn initiate_handshake(&self) {
         // SIGMA-I
         // sidA, g^x, nA, infoA
@@ -39,7 +39,7 @@ impl KeyExchangeComm for SigmaI {
     }
 }
 
-impl KeyExchangeComm for SigmaR {
+impl KeyExchangeProtocol for SigmaR {
     fn initiate_handshake(&self) {
         // SIGMA-I
         // sidA, g^x, nA, infoA
