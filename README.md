@@ -58,7 +58,7 @@ In the OPRF case, each server acts as a OPRF signer of the blinded salt from the
 Each server takes part as a share of the larger private key. The output from the OPRF
 can then be required to have a certain number of servers take part in its generation.
 
-Each server runs a [DKG protocol](https://en.wikipedia.org/wiki/Distributed_key_generation)
+Each server runs a [Distributed Key Generation protocol](https://en.wikipedia.org/wiki/Distributed_key_generation)
 to generate their share of the private key.
 
 Torben Pedersen first specified a protocol in 1991:
@@ -90,7 +90,7 @@ ways to mitigate this will be explored.
 
 🎸 There has not been a security audit performed on this package. 🎸
 
-## Draft Version 4
+## Draft Version
 
 This library is currently built against [draft version 3](https://tools.ietf.org/html/draft-krawczyk-cfrg-opaque-03).
 
@@ -107,6 +107,14 @@ The main changes seem to be:
   * OPRF definition changed
       * Does not include `vU = g^kU` when hashing
       * This was proven to not be needed anymore
+
+[Draft 5 of Opaque](https://www.ietf.org/id/draft-krawczyk-cfrg-opaque-05.txt) was
+released on May 29th, 2020.
+
+This will be the last change before a formal specification.
+
+The main changes for Draft 5 are mostly clarifications and added TODOs to prepare
+for specification.
 
 ## Things to do..
 
