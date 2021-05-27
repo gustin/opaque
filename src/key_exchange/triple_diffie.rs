@@ -1,5 +1,5 @@
 use crate::key_exchange::KeyExchange;
-use crate::key_exchange::KeyExchangeComm;
+use crate::key_exchange::KeyExchangeProtocol;
 
 
 pub struct TripleDiffie();
