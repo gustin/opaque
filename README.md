@@ -1,135 +1,97 @@
-# OPAQUE Protocol
-The OPAQUE protocol is an asymmetric password-authenticated key exchange, PAKE.
+# OPAQUE Protocol (Draft-03 Reference Implementation)
 
-A [PAKE](https://en.wikipedia.org/wiki/Password-authenticated_key_agreement)
-is a way to exchange cryptographic keys with the knowledge of a password.
-The asymmetric part of this aPAKE means that only one party knows the actual
-password; the password does not have to be revealed to both parties taking
-part in the exchange.
+> **For production use, see [opaque-ke](https://github.com/facebook/opaque-ke)** - the audited, RFC 9807-compliant Rust implementation from Meta.
 
-OPAQUE was selected by the CFRG as the aPake of choice:
-https://github.com/cfrg/pake-selection
+This repository is a **historical reference implementation** of the OPAQUE protocol targeting [draft-krawczyk-cfrg-opaque-03](https://tools.ietf.org/html/draft-krawczyk-cfrg-opaque-03) (October 2019).
 
-I discovered OPAQUE through Matthew Green's blog post:
-[Let's talk about PAKE](https://blog.cryptographyengineering.com/2018/10/19/lets-talk-about-pake/)
+OPAQUE has since been finalized as [RFC 9807](https://www.rfc-editor.org/rfc/rfc9807) (July 2025) with significant protocol changes. This codebase documents what the early draft looked like before the CFRG working group refined it into the final standard.
 
-## Key Exchange
+## What's Here
 
-This package currently uses a custom implementation of the battle-tested
-[SIGMA](https://webee.technion.ac.il/~hugo/sigma-pdf.pdf) family of key-exchange
-protocols. The full-fledged version, protecting identity.
+A Rust implementation of draft-03 OPAQUE featuring:
+- Custom DH-OPRF with multiplicative blinding
+- SIGMA-I key exchange (signature-based)
+- AES-GCM-SIV encrypted envelopes
+- Ristretto group operations via curve25519-dalek
 
-## OPRF
+## What Changed (draft-03 → RFC 9807)
 
-OPAQUE interleaves an oblivious pseudorandom function (OPRF) and a key-exchange
-protocol.
+The final RFC is essentially a complete rewrite:
 
-An (OPRF)[https://tools.ietf.org/html/draft-irtf-cfrg-voprf-03] is a way for
-two parties to take part in a computation in which one party provides the input
-to the computation, and the other party performs the computation.
+| Aspect | This Implementation (draft-03) | RFC 9807 |
+|--------|-------------------------------|----------|
+| Key Exchange | SIGMA-I (signatures) | 3DH (MACs only) |
+| Envelope | Encrypted credentials | Auth-only, derived keys |
+| OPRF | Custom with `v=g^k` in hash | RFC 9497 standard |
+| Password stretch | Optional | Required (Argon2id) |
 
-The exciting part is that the party performing the calculation learns nothing
-about the inputs provided, and the party providing the actual inputs
-only learns the outputs and nothing else about the computation.
+See [`docs/specs/SPEC_DIFF.md`](docs/specs/SPEC_DIFF.md) for the full breakdown.
 
+## For Production
 
-### Verifiable
+Use **[opaque-ke](https://crates.io/crates/opaque-ke)**:
 
-A verifiable OPRF, a vOPRF, enables each party to prove that the computation
-was valid.
+```toml
+[dependencies]
+opaque-ke = "4.0"
+```
 
-## Threshold
+It's:
+- RFC 9807 compliant
+- Audited by NCC Group (sponsored by WhatsApp)
+- Battle-tested in production
+- Actively maintained
 
-OPAQUE lends itself to the ability to a threshold to mitigate a data store being
-stolen or accessed.
+## Background
 
-A threshold protocol basically distributes a private key amongst a bunch of servers.
-A certain a certain number of servers, the threshold, is needed to take part in a protocol.
+OPAQUE is an asymmetric password-authenticated key exchange (aPAKE) where only the client knows the password - the server never sees it, even during registration.
 
-NIST is working to standardize the threshold schemes for cryptographic primitives:
-https://csrc.nist.gov/Projects/threshold-cryptography
+I discovered OPAQUE through Matthew Green's blog post: [Let's talk about PAKE](https://blog.cryptographyengineering.com/2018/10/19/lets-talk-about-pake/)
 
-### Threshold OPRF
+### Threshold OPAQUE
 
-An OPRF can become a threshold OPRF:
-https://eprint.iacr.org/2017/363.pdf
+OPAQUE lends itself to threshold schemes to mitigate database compromise. A threshold protocol distributes a private key amongst servers - a certain number (the threshold) is needed to participate.
 
-In the OPRF case, each server acts as a OPRF signer of the blinded salt from the client.
-Each server takes part as a share of the larger private key. The output from the OPRF
-can then be required to have a certain number of servers take part in its generation.
+In the OPRF case, each server acts as an OPRF signer of the blinded salt from the client. Each server holds a share of the larger private key. The OPRF output requires a threshold number of servers to participate in its generation.
 
-Each server runs a [Distributed Key Generation protocol](https://en.wikipedia.org/wiki/Distributed_key_generation)
-to generate their share of the private key.
-
-Torben Pedersen first specified a protocol in 1991:
+Each server runs a [Distributed Key Generation](https://en.wikipedia.org/wiki/Distributed_key_generation) protocol to generate their share. Torben Pedersen first specified such a protocol in 1991:
 https://pdfs.semanticscholar.org/642b/d1bbc86c7750cef9fa770e9e4ba86bd49eb9.pdf
 
-The Feldman VSS (verifiable secret sharing) is a way to take part in the DKG:
+The Feldman VSS (verifiable secret sharing) is a way to participate in DKG:
 https://ieeexplore.ieee.org/abstract/document/4568297/
 
-## Security
+More references:
+- [Threshold OPRF paper](https://eprint.iacr.org/2017/363.pdf)
+- [NIST Threshold Cryptography project](https://csrc.nist.gov/Projects/threshold-cryptography)
 
-🎸 There has not been a security audit performed on this package. 🎸
+### Security
 
-OPAQUE has been proven to be resilient against pre-computation attacks
-in this [whitepaper](https://eprint.iacr.org/2018/163.pdf).
+OPAQUE has a [formal security proof](https://eprint.iacr.org/2018/163.pdf) showing resilience against pre-computation attacks and forward secrecy. Main attack vectors are online brute force (mitigate with rate-limiting) and offline attacks on stolen envelopes (mitigate with password stretching).
 
-OPAQUE exhibits forward secrecy.
+## Draft History
 
-It is one of the few PAKEs with a security proof:
-https://eprint.iacr.org/2018/163.pdf
+This implementation targets **draft-03** (October 2019). The spec evolved significantly:
 
-The main attack is a basic brute force, the ability to attempt password
-authentication repeatedly. Limiting this attack can easily be accomplished
-through standard rate-limiting.
+**Draft 4** (May 2020): Envelope construction clarified (AES-CTR + HMAC), 3DH added, OPRF simplified (removed `v=g^k` from hash).
 
-If the database containing the encrypted envelops was stolen, a brute
-force attack, emulating this protocol, could be used. The passwords
-are stretched in a way to make this computationally intensive. Cryptographic
-ways to mitigate this will be explored.
+**Draft 5** (May 2020): Clarifications, prep for formal spec.
 
-🎸 There has not been a security audit performed on this package. 🎸
+**RFC 9807** (July 2025): Complete rewrite - 3DH as primary KE, authentication-only envelope with derived keys, mandatory Argon2id, RFC 9497 OPRF.
 
-## Draft Version
+## References
 
-This library is currently built against [draft version 3](https://tools.ietf.org/html/draft-krawczyk-cfrg-opaque-03).
+- [Original OPAQUE paper](https://eprint.iacr.org/2018/163.pdf) (Jarecki, Krawczyk, Xu - Eurocrypt 2018)
+- [CFRG PAKE selection](https://github.com/cfrg/pake-selection)
+- [RFC 9807 - OPAQUE](https://www.rfc-editor.org/rfc/rfc9807)
+- [RFC 9497 - OPRF](https://www.rfc-editor.org/rfc/rfc9497)
 
-[Draft 4 of Opaque](https://tools.ietf.org/html/draft-krawczyk-cfrg-opaque-04) was
-released on May 15th, 2020.
+## Specs
 
-The main changes seem to be:
-  * Details on how to build out the user Envelope:
-      * specified using AES-CTR and HMAC
-      * only encrypt-then-MAC is recommended
-      * GCM is allowed, but only GCM-then-HMAC
-  * Key exchange protocols is expanded:
-      * 3DH is added to the already described HMQV and SIGMA-I
-  * OPRF definition changed
-      * Does not include `vU = g^kU` when hashing
-      * This was proven to not be needed anymore
+The `docs/specs/` directory contains:
+- `draft-krawczyk-cfrg-opaque-03.txt` - the spec this implementation targets
+- `rfc9807.txt` - the final RFC
+- `SPEC_DIFF.md` - detailed migration analysis
 
-[Draft 5 of Opaque](https://www.ietf.org/id/draft-krawczyk-cfrg-opaque-05.txt) was
-released on May 29th, 2020.
+## License
 
-This will be the last change before a formal specification.
-
-The main changes for Draft 5 are mostly clarifications and added TODOs to prepare
-for specification.
-
-## Things to do..
-
-A more detailed list of things Todo:
-@[:markdown](ToDo.md)
-
-## Execute
-
-    cargo run --bin opaque
-
-## Testing
-
-A set of OPAQUE test vectors are tested against:
-
-    cargo test
-
-
-
+BSD 3-Clause
